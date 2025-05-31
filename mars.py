@@ -42,6 +42,9 @@ on_ground = False
 oxygen = 100
 game_over = False
 game_win = False
+jump_sound = pygame.mixer.Sound('audio/jump.mp3')
+jump_sound.set_volume(0.1)
+
 
 # Level setup
 platforms = [
@@ -138,6 +141,7 @@ while True:
         if (keys[pygame.K_SPACE] or keys[pygame.K_w] or keys[pygame.K_UP]) and on_ground:
             velocity_y = JUMP_STRENGTH
             on_ground = False
+            jump_sound.play()
 
         velocity_y += GRAVITY
         player.y += velocity_y
@@ -240,7 +244,7 @@ while True:
         msg = font.render("Game Over!", True, (255, 0, 0))
         screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
     elif game_win:
-        msg = font.render("Mars: 1, Afrika: 0", True, (0, 255, 0))
+        msg = font.render("YOU WON!!!!", True, (0, 255, 0))
         screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
 
     pygame.display.flip()
