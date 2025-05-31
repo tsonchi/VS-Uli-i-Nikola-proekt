@@ -8,6 +8,9 @@ clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 36)
 
 # Load images
+bg_img = pygame.image.load("assets/background.png").convert()
+bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
+
 player_img = pygame.image.load("assets/player.png")
 player_img = pygame.transform.scale(player_img, (40, 50))
 
@@ -40,24 +43,25 @@ game_win = False
 # Level setup
 platforms = [
     pygame.Rect(0, 580, 4000, 20),
-    pygame.Rect(200, 450, 200, 20),
+    pygame.Rect(200, 450, 150, 20),
     pygame.Rect(500, 400, 300, 20),
     pygame.Rect(900, 350, 150, 20),
     pygame.Rect(1200, 300, 150, 20),
     pygame.Rect(1500, 250, 300, 20),
     pygame.Rect(1900, 300, 200, 20),
     pygame.Rect(2200, 250, 300, 20),
+    pygame.Rect(2700, 250, 300, 20),
 ]
 
 water = pygame.Rect(2450, 210, 30, 40)
-alien = pygame.Rect(300, 400, 40, 50)
+alien = pygame.Rect(300, 400, 30, 30)
 alien2 = pygame.Rect(1600, 180, 40, 50) 
 alien2_direction = 1
 volcano = pygame.Rect(1250, 220, 80, 80)
 alien_image = pygame.image.load("assets/alien.png").convert_alpha()
 alien_image = pygame.transform.scale(alien_image, (60, 60))
 alien2_image = pygame.image.load("assets/alien2.png").convert_alpha()
-alien2_image = pygame.transform.scale(alien2_image, (50, 70))
+alien2_image = pygame.transform.scale(alien2_image, (60, 70))
 fireballs = []
 
 camera_x = 0
@@ -78,7 +82,7 @@ spawn_timer = 0
 
 # Main loop
 while True:
-    screen.fill((153, 76, 0))  # Mars surface color
+    screen.blit(bg_img, (0, 0))  # Mars surface color
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -114,7 +118,7 @@ while True:
                     on_ground = True
 
         oxygen -= OXYGEN_DECREASE
-        if oxygen <= 0 or player.colliderect(alien):
+        if oxygen <= 0 or player.colliderect(alien)or player.colliderect(alien2):
             game_over = True
         if player.colliderect(water):
             game_win = True
