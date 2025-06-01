@@ -181,7 +181,8 @@ while True:
             game_over = True
         if player.colliderect(water):
             game_win = True
-
+        if player.y> 600:
+            game_over = True
         if player.x > WIDTH // 2:
             camera_x = player.x - WIDTH // 2
         else:
