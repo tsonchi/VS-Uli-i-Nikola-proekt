@@ -10,26 +10,28 @@ font = pygame.font.SysFont(None, 40)
 clock = pygame.time.Clock()
 
 def run_game(game_file):
-    # Стартира друг python файл (играта)
     subprocess.run([sys.executable, game_file])
 
-MAX_CHOICES = 3
-choice=0
+MAX_CHOICES = 4
+choice = 1 
+
+options = ["[1] Mars", "[2] Moon", "[3] Earth", "[4] Quit"]
+positions = [150, 200, 250, 300]  # y
+
 while True:
     screen.fill((30, 30, 30))
     title = font.render("Choose your planet:", True, (255, 255, 255))
-    mars = font.render("[1] Mars", True, (255, 0, 0))
-    moon = font.render("[2] Moon", True, (200, 200, 200))
-    earth = font.render("[3] Earth", True, (0, 255, 0))
-    quit_text = font.render("Press ESC to Quit", True, (180, 180, 180))
 
     screen.blit(title, (180, 50))
-    screen.blit(mars, (250, 150))
-    screen.blit(moon, (250, 200))
-    screen.blit(earth, (250, 250))
-    screen.blit(quit_text, (180, 350))
 
-    
+    for i, text in enumerate(options):
+        y = positions[i]
+        if choice == i + 1:
+            pygame.draw.rect(screen, (60, 60, 60), (240, y - 5, 300, 40), border_radius=6)
+        color = (255, 255, 255)
+        rendered = font.render(text, True, color)
+        screen.blit(rendered, (250, y))
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -39,12 +41,12 @@ while True:
             if event.key == pygame.K_DOWN:
                 choice += 1
                 if choice > MAX_CHOICES:
-                    choice = 1  
+                    choice = 1
 
             elif event.key == pygame.K_UP:
                 choice -= 1
                 if choice < 1:
-                    choice = MAX_CHOICES 
+                    choice = MAX_CHOICES
 
             elif event.key == pygame.K_RETURN:
                 if choice == 1:
@@ -53,6 +55,13 @@ while True:
                     run_game("moon.py")
                 elif choice == 3:
                     run_game("earth.py")
+                elif choice == 4:  
+                    pygame.quit()
+                    sys.exit()
+
+            elif event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                sys.exit()
 
     pygame.display.flip()
     clock.tick(60)
