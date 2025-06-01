@@ -2,6 +2,7 @@ import pygame
 import sys
 import subprocess
 import random
+import math
 
 pygame.init()
 info = pygame.display.Info()
@@ -32,9 +33,8 @@ option_spacing = int(HEIGHT * 0.1)
 highlight_padding_x = int(WIDTH * 0.035)
 highlight_padding_y = int(HEIGHT * 0.02)
 
-# Lock star layout to be consistent every run
 random.seed(42)
-NUM_STARS = 200
+NUM_STARS = 300
 stars = [(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(NUM_STARS)]
 
 alien_img = pygame.image.load("assets/alien.png").convert_alpha()
@@ -68,7 +68,7 @@ player_rect = player_img.get_rect()
 player_rect.center = (WIDTH * 0.95, HEIGHT * 0.95)
 
 while True:
-    screen.fill((10, 10, 30))  # Night sky background
+    screen.fill((10, 10, 30))
 
     for star in stars:
         pygame.draw.circle(screen, (255, 255, 255), star, 1)
@@ -79,12 +79,18 @@ while True:
     screen.blit(jump_img, jump_rect)
     screen.blit(meteor_img, meteor_rect)
     screen.blit(player_img, player_rect)
-    
-    title_text = font.render("Choose an Option", True, (255, 255, 255))
-    title_shadow = font.render("Choose an Option", True, (0, 0, 0))
-    title_rect = title_text.get_rect(center=(WIDTH // 2, title_y))
-    screen.blit(title_shadow, title_rect.move(2, 2))
-    screen.blit(title_text, title_rect)
+
+    title_lines = [
+        "Navigate With UP and DOWN",
+        "And Choose An Option with ENTER"
+    ]
+
+    for i, line in enumerate(title_lines):
+        text = font.render(line, True, (255, 255, 255))
+        shadow = font.render(line, True, (0, 0, 0))
+        text_rect = text.get_rect(center=(WIDTH // 2, title_y + i * (font_size + 10)))
+        screen.blit(shadow, text_rect.move(2, 2))
+        screen.blit(text, text_rect)
 
     max_text_width = max(font.render(text, True, color).get_width() for text, color in options)
     rect_width = max_text_width + highlight_padding_x * 2
@@ -99,7 +105,9 @@ while True:
             rect_x = (WIDTH - rect_width) // 2
             rect_y = y - rect_height // 2
             highlight_rect = pygame.Rect(rect_x, rect_y, rect_width, rect_height)
-            pygame.draw.rect(screen, (80, 80, 80), highlight_rect, border_radius=14)
+            pulse = int(60 + 40 * math.sin(pygame.time.get_ticks() * 0.005))
+            color = (pulse, pulse, pulse)
+            pygame.draw.rect(screen, color, highlight_rect, border_radius=14)
 
         screen.blit(text_surface, text_rect)
 
@@ -117,7 +125,7 @@ while True:
                 if choice < 1:
                     choice = MAX_CHOICES
             elif event.key == pygame.K_RETURN:
-                pygame.display.set_mode((WIDTH, HEIGHT))  
+                pygame.display.set_mode((WIDTH, HEIGHT))
                 pygame.quit()
                 if choice == 1:
                     run_game("mars.py")
