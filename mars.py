@@ -11,9 +11,6 @@ font = pygame.font.SysFont(None, 36)
 bg_img = pygame.image.load("assets/background.png").convert()
 bg_img = pygame.transform.scale(bg_img, (2000, HEIGHT))
 
-player_img = pygame.image.load("assets/player.png")
-player_img = pygame.transform.scale(player_img, (40, 50))
-
 alien_img = pygame.image.load("assets/alien.png").convert_alpha()
 alien_img = pygame.transform.scale(alien_img, (60, 60))
 
@@ -28,7 +25,17 @@ fireball_img = pygame.transform.scale(fireball_img, (20, 20))
 
 alien2_image = pygame.image.load("assets/alien2.png").convert_alpha()
 alien2_image = pygame.transform.scale(alien2_image, (65, 70))
+player_stand = pygame.image.load("assets/player_stand.png").convert_alpha()
+player_walk_1 = pygame.image.load("assets/player_walk_1.png").convert_alpha()
+player_walk_2 = pygame.image.load("assets/player_walk_2.png").convert_alpha()
+player_jump = pygame.image.load("assets/jump.png").convert_alpha()
 
+# Scale all player images
+player_stand = pygame.transform.scale(player_stand, (40, 50))
+player_walk_1 = pygame.transform.scale(player_walk_1, (40, 50))
+player_walk_2 = pygame.transform.scale(player_walk_2, (40, 50))
+player_jump = pygame.transform.scale(player_jump, (40, 50))
+walk_images = [player_walk_1, player_walk_2]
 # Game constants
 PLAYER_SPEED = 5
 GRAVITY = 0.3
@@ -44,7 +51,9 @@ game_over = False
 game_win = False
 jump_sound = pygame.mixer.Sound('audio/jump.mp3')
 jump_sound.set_volume(0.1)
-
+walk_index = 0
+walk_timer = 0
+facing_right = True
 
 # Level setup
 platforms = [
@@ -136,8 +145,10 @@ while True:
         dx = 0
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             dx = -PLAYER_SPEED
+            facing_right = False
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             dx = PLAYER_SPEED
+            facing_right = True
         if (keys[pygame.K_SPACE] or keys[pygame.K_w] or keys[pygame.K_UP]) and on_ground:
             velocity_y = JUMP_STRENGTH
             on_ground = False
@@ -228,7 +239,6 @@ while True:
     else:
         screen.blit(alien_img, (alien3.x - camera_x, alien3.y))
 
-    screen.blit(player_img, (player.x - camera_x, player.y))
     screen.blit(alien2_image, (alien2.x - camera_x, alien2.y))
 
     screen.blit(water_img, (water.x - camera_x, water.y))
@@ -236,6 +246,24 @@ while True:
 
     for fb in fireballs:
         screen.blit(fireball_img, (fb.x - camera_x, fb.y))
+    # PLAYER ANIMATION
+    is_jumping = velocity_y < -1
+    is_falling = velocity_y > 1
+    if is_falling or is_jumping:
+        current_img = player_jump
+    elif dx != 0:
+        walk_timer += 1
+        if walk_timer >= 10:
+            walk_timer = 0
+            walk_index = (walk_index + 1) % len(walk_images)
+        current_img = walk_images[walk_index]
+    else:
+        current_img = player_stand
+
+    if not facing_right:
+        current_img = pygame.transform.flip(current_img, True, False)
+
+    screen.blit(current_img, (player.x - camera_x, player.y))
 
     pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
     pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
