@@ -32,6 +32,9 @@ laser_img = pygame.transform.scale(laser_img, (50, 15))
 mask_img = pygame.image.load("assets/mask.png")
 mask_img = pygame.transform.scale(mask_img, (50, 50))
 
+meteor_img = pygame.image.load("assets/meteor.png").convert_alpha()
+meteor_img = pygame.transform.scale(meteor_img, (40, 60))
+
 dark_bg_img = bg_img.copy()
 dark_bg_img.fill((50, 50, 50), special_flags=pygame.BLEND_RGB_MULT)
 
@@ -65,14 +68,21 @@ platforms = [
     pygame.Rect(500, 820, 200, 20),
     pygame.Rect(1050, 630, 20, 20),
     pygame.Rect(1750, 580, 20, 20),
-    pygame.Rect(1450, 420, 100, 20),
     pygame.Rect(2150, 580, 200, 20),
+    pygame.Rect(1450, 420, 100, 20),
+    pygame.Rect(1100, 260, 50, 20),
+    pygame.Rect(1500, 160, 50, 20),
+    pygame.Rect(2200, 260, 50, 20),
+    pygame.Rect(2800, 350, 355, 20),
 ]
 
 satellite = pygame.Rect(1450, 770, 80, 60)
 mask = pygame.Rect(2200, 530, 50, 50)
 mask_gotten = False
 lasers = []
+meteors = []
+meteor_timer = 0
+meteor_active = False
 
 camera_x = 0
 camera_y = 0
@@ -81,8 +91,9 @@ show_mask_msg = False
 mask_msg_timer = 180  # 3 seconds
 
 def reset_game():
-    global player, velocity_y, oxygen, game_over, game_win, lasers, mask_gotten, show_mask_msg, mask_msg_timer
+    global player, velocity_y, oxygen, game_over, game_win, lasers, mask_gotten, show_mask_msg, mask_msg_timer, meteors, meteor_active
     player.x, player.y = 100, 1500
+    satellite.y = 770
     velocity_y = 0
     oxygen = 100
     game_over = False
@@ -93,22 +104,26 @@ def reset_game():
     mask.x = 2200
     mask.y = 530
     lasers.clear()
+    meteors.clear()
+    meteor_active = False
 
 def spawn_laser():
     lasers.append(pygame.Rect(satellite.x, satellite.y + 20, 20, 20))
 
+def spawn_meteor():
+    x_pos = random.randint(camera_x, camera_x + WIDTH)
+    meteors.append(pygame.Rect(x_pos, camera_y - 100, 40, 60))
+
 spawn_timer = 0
 
-
-
-# Glowy lights (positions to simulate guidance)
-glow_positions = [(1600, 700), (1800, 600), (2000, 600), (2200, 600)]
+# Glowy lights positions (to simulate guidance)
+glow_positions = [(1750, 560), (1470,400), (1125, 240), (1525, 140), (2225, 240), (2815, 330), (2835, 330), (2855, 330), (2875, 330), (2895, 330), (2915, 330), (2935, 330), (2955, 330), (2975, 330), (2995, 330), (3015, 330), (3035, 330), (3055, 330), (3075, 330), (3095, 330), (3115, 330), (3135, 330)]
 
 # Main loop
 while True:
     if mask_gotten:
         screen.fill((50, 50, 50))
-
+        satellite.y = -999
     else:
         screen.blit(bg_img, (-camera_x * 0.2, -camera_y * 0.2))
 
@@ -149,6 +164,10 @@ while True:
                     velocity_y = 0
                     on_ground = True
 
+                    if plat.x == 2800 and plat.y == 350 and meteor_active == False:
+                        oxygen = 100
+                        meteor_active = True
+
         if player.colliderect(satellite):
             if velocity_y > 0 and player.bottom <= satellite.bottom:
                 player.bottom = satellite.top
@@ -185,6 +204,28 @@ while True:
             if laser.right < 0:
                 lasers.remove(laser)
 
+
+
+        if meteor_active:
+            msg = font.render("Oh no a meteor rain! Survive until we come and save you!", True, (255, 255, 255))
+            screen.blit(msg, (WIDTH // 2 - 250, 100))
+            meteor_timer += 1
+            if player.y>330:
+                game_over = True
+            if meteor_timer > 15:
+                spawn_meteor()
+                meteor_timer = 0
+
+            for meteor in meteors[:]:
+                meteor.y += 6
+                if meteor.colliderect(player):
+                    game_over = True
+                if meteor.top > player.y + HEIGHT:
+                    meteors.remove(meteor)
+            if oxygen < 5:
+                game_win = True
+            
+
     # Draw platforms
     for plat in platforms:
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y - camera_y, plat.width, plat.height))
@@ -196,6 +237,10 @@ while True:
     # Draw lasers
     for l in lasers:
         screen.blit(laser_img, (l.x - camera_x, l.y - camera_y))
+
+    # Draw meteors
+    for m in meteors:
+        screen.blit(meteor_img, (m.x - camera_x, m.y - camera_y))
 
     # Draw glowy lights
     if mask_gotten:
@@ -238,8 +283,8 @@ while True:
         msg = font.render("Game Over!", True, (255, 0, 0))
         screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
     elif game_win:
-        msg = font.render("YOU WON!!!!", True, (0, 255, 0))
-        screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
+        msg = font.render("YOU GOT SAVED ON TIME THANK GOD! YOU WON!!!", True, (0, 255, 0))
+        screen.blit(msg, (WIDTH // 2 - 300, HEIGHT // 2))
 
     pygame.display.flip()
     clock.tick(60)
