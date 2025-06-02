@@ -1,15 +1,20 @@
 import pygame, sys, random
 
 pygame.init()
-screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-WIDTH, HEIGHT = screen.get_size()
-pygame.display.set_caption("Moon Escape")
+info = pygame.display.Info()
+WIDTH, HEIGHT = info.current_w, info.current_h
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+pygame.display.set_caption("Moon Path")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 36)
 
-# Load images
+PLATFORM_OFFSET_Y = 0
+
 bg_img = pygame.image.load("assets/moon_background.png").convert()
 bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
+
+dark_bg_img = bg_img.copy()
+dark_bg_img.fill((50, 50, 50), special_flags=pygame.BLEND_RGB_MULT)
 
 player_stand = pygame.image.load("assets/player_stand.png").convert_alpha()
 player_walk_1 = pygame.image.load("assets/player_walk_1.png").convert_alpha()
@@ -34,45 +39,42 @@ mask_img = pygame.transform.scale(mask_img, (50, 50))
 meteor_img = pygame.image.load("assets/meteor.png").convert_alpha()
 meteor_img = pygame.transform.scale(meteor_img, (40, 60))
 
-dark_bg_img = bg_img.copy()
-dark_bg_img.fill((50, 50, 50), special_flags=pygame.BLEND_RGB_MULT)
-
 PLAYER_SPEED = 5
 GRAVITY = 0.1
 JUMP_STRENGTH = -6
 OXYGEN_DECREASE = 0.1
 
-player = pygame.Rect(100, 1510, 40, 50)
+player = pygame.Rect(100, 1510 + PLATFORM_OFFSET_Y, 40, 50)
 velocity_y = 0
 on_ground = False
 oxygen = 100
 game_over = False
 game_win = False
 jump_sound = pygame.mixer.Sound('audio/jump.mp3')
-jump_sound.set_volume(0.1)
+jump_sound.set_volume(0.05)
 
 walk_index = 0
 walk_timer = 0
 facing_right = True
 
 platforms = [
-    pygame.Rect(0, 1560, 4000, 20),
-    pygame.Rect(200, 1370, 100, 20),
-    pygame.Rect(500, 1190, 100, 20),
-    pygame.Rect(200, 1000, 100, 20),
-    pygame.Rect(500, 820, 200, 20),
-    pygame.Rect(1050, 630, 20, 20),
-    pygame.Rect(1750, 580, 20, 20),
-    pygame.Rect(2150, 580, 200, 20),
-    pygame.Rect(1450, 420, 100, 20),
-    pygame.Rect(1100, 260, 50, 20),
-    pygame.Rect(1500, 160, 50, 20),
-    pygame.Rect(2200, 260, 50, 20),
-    pygame.Rect(2800, 350, 355, 20),
+    pygame.Rect(0, 1560 + PLATFORM_OFFSET_Y, 4000, 20),
+    pygame.Rect(200, 1370 + PLATFORM_OFFSET_Y, 100, 20),
+    pygame.Rect(500, 1190 + PLATFORM_OFFSET_Y, 100, 20),
+    pygame.Rect(200, 1000 + PLATFORM_OFFSET_Y, 100, 20),
+    pygame.Rect(500, 820 + PLATFORM_OFFSET_Y, 200, 20),
+    pygame.Rect(1050, 630 + PLATFORM_OFFSET_Y, 20, 20),
+    pygame.Rect(1750, 580 + PLATFORM_OFFSET_Y, 20, 20),
+    pygame.Rect(2150, 580 + PLATFORM_OFFSET_Y, 200, 20),
+    pygame.Rect(1450, 420 + PLATFORM_OFFSET_Y, 100, 20),
+    pygame.Rect(1100, 260 + PLATFORM_OFFSET_Y, 50, 20),
+    pygame.Rect(1500, 160 + PLATFORM_OFFSET_Y, 50, 20),
+    pygame.Rect(2200, 260 + PLATFORM_OFFSET_Y, 50, 20),
+    pygame.Rect(2800, 350 + PLATFORM_OFFSET_Y, 355, 20),
 ]
 
-satellite = pygame.Rect(1450, 770, 80, 60)
-mask = pygame.Rect(2200, 530, 50, 50)
+satellite = pygame.Rect(1450, 770 + PLATFORM_OFFSET_Y, 80, 60)
+mask = pygame.Rect(2200, 530 + PLATFORM_OFFSET_Y, 50, 50)
 mask_gotten = False
 lasers = []
 meteors = []
@@ -80,16 +82,22 @@ meteor_timer = 0
 meteor_active = False
 
 camera_x = 0
-min_camera_y = 1560 - HEIGHT
-camera_y = max(min_camera_y, player.y - HEIGHT // 2)
+min_camera_y = 1560 + PLATFORM_OFFSET_Y - HEIGHT
+first_platform_y = 1560 + PLATFORM_OFFSET_Y  # first platform’s Y position
+
+if player.y < first_platform_y - 10:
+    camera_y = max(min_camera_y, player.y - HEIGHT // 2)
+else:
+    camera_y = min_camera_y
+
 
 show_mask_msg = False
 mask_msg_timer = 180
 
 def reset_game():
     global player, velocity_y, oxygen, game_over, game_win, lasers, mask_gotten, show_mask_msg, mask_msg_timer, meteors, meteor_active
-    player.x, player.y = 100, 1510
-    satellite.y = 770
+    player.x, player.y = 100, 1510 + PLATFORM_OFFSET_Y
+    satellite.y = 770 + PLATFORM_OFFSET_Y
     velocity_y = 0
     oxygen = 100
     game_over = False
@@ -98,7 +106,7 @@ def reset_game():
     show_mask_msg = False
     mask_msg_timer = 180
     mask.x = 2200
-    mask.y = 530
+    mask.y = 530 + PLATFORM_OFFSET_Y
     lasers.clear()
     meteors.clear()
     meteor_active = False
@@ -159,7 +167,7 @@ while True:
                     player.bottom = plat.top
                     velocity_y = 0
                     on_ground = True
-                    if plat.x == 2800 and plat.y == 350 and not meteor_active:
+                    if plat.x == 2800 and plat.y == 350 + PLATFORM_OFFSET_Y and not meteor_active:
                         oxygen = 100
                         meteor_active = True
 
@@ -181,15 +189,21 @@ while True:
         oxygen -= OXYGEN_DECREASE
 
         camera_x = max(0, player.x - WIDTH // 2)
-        min_camera_y = 1560 - HEIGHT
-        camera_y = max(min_camera_y, player.y - HEIGHT // 2)
+        min_camera_y = 1560 + PLATFORM_OFFSET_Y - HEIGHT
+        first_platform_y = 1560 + PLATFORM_OFFSET_Y  # first platform’s Y position
+
+        if player.y < first_platform_y - 10:
+            camera_y = max(min_camera_y, player.y - HEIGHT // 2)
+        else:
+            camera_y = min_camera_y
+
 
         spawn_timer += 1
         if spawn_timer > 110:
             spawn_laser()
             spawn_timer = 0
 
-        if player.y > 1700:
+        if player.y > 1700 + PLATFORM_OFFSET_Y:
             game_over = True
 
         for laser in lasers[:]:
@@ -203,7 +217,7 @@ while True:
             msg = font.render("Oh no a meteor rain! Survive until we come and save you!", True, (255, 255, 255))
             screen.blit(msg, (WIDTH // 2 - 250, 100))
             meteor_timer += 1
-            if player.y > 330:
+            if player.y > 330 + PLATFORM_OFFSET_Y:
                 game_over = True
             if meteor_timer > 15:
                 spawn_meteor()
@@ -232,7 +246,7 @@ while True:
 
     if mask_gotten:
         for gx, gy in glow_positions:
-            pygame.draw.circle(screen, (100, 255, 255), (gx - camera_x, gy - camera_y), 8)
+            pygame.draw.circle(screen, (100, 255, 255), (gx - camera_x, gy + PLATFORM_OFFSET_Y - camera_y), 8)
 
     is_jumping = velocity_y < -1
     is_falling = velocity_y > 1

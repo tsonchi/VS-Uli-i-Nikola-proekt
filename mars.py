@@ -46,7 +46,7 @@ oxygen = 100
 game_over = False
 game_win = False
 jump_sound = pygame.mixer.Sound('audio/jump.mp3')
-jump_sound.set_volume(0.1)
+jump_sound.set_volume(0.05)
 walk_index = 0
 walk_timer = 0
 facing_right = True
