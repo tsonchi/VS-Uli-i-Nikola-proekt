@@ -10,6 +10,17 @@ WIDTH, HEIGHT = info.current_w, info.current_h
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Main Menu")
 
+pygame.mixer.init()
+pygame.mixer.music.set_volume(0.07)  
+music_started = False
+
+jump_sound = pygame.mixer.Sound("audio/jump.mp3")
+jump_sound.set_volume(0.05)
+jump_sound.play()
+
+pygame.time.set_timer(pygame.USEREVENT, int(jump_sound.get_length() * 1000))
+
+
 font_size = int(HEIGHT * 0.05)
 font = pygame.font.SysFont("arial", font_size, bold=True)
 clock = pygame.time.Clock()
@@ -138,6 +149,10 @@ while True:
             elif event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 sys.exit()
+        elif event.type == pygame.USEREVENT and not music_started:
+            pygame.mixer.music.load("audio/title.wav")
+            pygame.mixer.music.play(-1, fade_ms=2000) 
+            music_started = True 
 
     pygame.display.flip()
     clock.tick(60)
