@@ -1,28 +1,26 @@
 import pygame, sys, random
 
 pygame.init()
-WIDTH, HEIGHT = 1200, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+info = pygame.display.Info()
+WIDTH, HEIGHT = info.current_w, info.current_h
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Mars Escape")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 36)
 
-# Load images
+PLATFORM_OFFSET_Y = HEIGHT - 600
+
 bg_img = pygame.image.load("assets/background.png").convert()
 bg_img = pygame.transform.scale(bg_img, (2000, HEIGHT))
 
 alien_img = pygame.image.load("assets/alien.png").convert_alpha()
 alien_img = pygame.transform.scale(alien_img, (60, 60))
-
 water_img = pygame.image.load("assets/water.png")
 water_img = pygame.transform.scale(water_img, (60, 50))
-
 volcano_img = pygame.image.load("assets/volcano.png")
 volcano_img = pygame.transform.scale(volcano_img, (80, 60))
-
 fireball_img = pygame.image.load("assets/fireball.png")
 fireball_img = pygame.transform.scale(fireball_img, (20, 20))
-
 alien2_image = pygame.image.load("assets/alien2.png").convert_alpha()
 alien2_image = pygame.transform.scale(alien2_image, (65, 70))
 player_stand = pygame.image.load("assets/player_stand.png").convert_alpha()
@@ -30,20 +28,18 @@ player_walk_1 = pygame.image.load("assets/player_walk_1.png").convert_alpha()
 player_walk_2 = pygame.image.load("assets/player_walk_2.png").convert_alpha()
 player_jump = pygame.image.load("assets/jump.png").convert_alpha()
 
-# Scale all player images
 player_stand = pygame.transform.scale(player_stand, (40, 50))
 player_walk_1 = pygame.transform.scale(player_walk_1, (40, 50))
 player_walk_2 = pygame.transform.scale(player_walk_2, (40, 50))
 player_jump = pygame.transform.scale(player_jump, (40, 50))
 walk_images = [player_walk_1, player_walk_2]
-# Game constants
+
 PLAYER_SPEED = 5
 GRAVITY = 0.3
 JUMP_STRENGTH = -9
 OXYGEN_DECREASE = 0.1
 
-# Player
-player = pygame.Rect(100, 500, 40, 50)
+player = pygame.Rect(100, 500 + PLATFORM_OFFSET_Y, 40, 50)
 velocity_y = 0
 on_ground = False
 oxygen = 100
@@ -55,56 +51,58 @@ walk_index = 0
 walk_timer = 0
 facing_right = True
 
-# Level setup
 platforms = [
-    pygame.Rect(0, 580, 4000, 20),
-    pygame.Rect(200, 450, 150, 20),
-    pygame.Rect(500, 400, 300, 20),
-    pygame.Rect(900, 350, 150, 20),
-    pygame.Rect(1200, 300, 150, 20),
-    pygame.Rect(1500, 250, 300, 20),
-    pygame.Rect(1900, 300, 300, 20),
-    pygame.Rect(2300, 250, 300, 20),
-    pygame.Rect(2300, 20, 300, 20),
-    pygame.Rect(2700, 250, 400, 20),
-    pygame.Rect(3200, 350, 500, 20),
+    pygame.Rect(0, 580 + PLATFORM_OFFSET_Y, 4000, 20),
+    pygame.Rect(200, 450 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(500, 400 + PLATFORM_OFFSET_Y, 300, 20),
+    pygame.Rect(900, 350 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(1200, 300 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(1500, 250 + PLATFORM_OFFSET_Y, 300, 20),
+    pygame.Rect(1900, 300 + PLATFORM_OFFSET_Y, 300, 20),
+    pygame.Rect(2300, 250 + PLATFORM_OFFSET_Y, 300, 20),
+    pygame.Rect(2300, 20 + PLATFORM_OFFSET_Y, 300, 20),
+    pygame.Rect(2700, 250 + PLATFORM_OFFSET_Y, 400, 20),
+    pygame.Rect(3200, 350 + PLATFORM_OFFSET_Y, 500, 20),
 ]
 
 spikes = [
-    [(2000, 300), (2020, 260), (2040, 300)],
-    [(2040, 300), (2060, 260), (2080, 300)],
-    [(2080, 300), (2100, 260), (2120, 300)],
-    [(2800, 250), (2820, 210), (2840, 250)],
-    [(2840, 250), (2860, 210), (2880, 250)],
-    [(2880, 250), (2900, 210), (2920, 250)],
-    [(3020, 250), (3040, 210), (3060, 250)],
+    [(2000, 300 + PLATFORM_OFFSET_Y), (2020, 260 + PLATFORM_OFFSET_Y), (2040, 300 + PLATFORM_OFFSET_Y)],
+    [(2040, 300 + PLATFORM_OFFSET_Y), (2060, 260 + PLATFORM_OFFSET_Y), (2080, 300 + PLATFORM_OFFSET_Y)],
+    [(2080, 300 + PLATFORM_OFFSET_Y), (2100, 260 + PLATFORM_OFFSET_Y), (2120, 300 + PLATFORM_OFFSET_Y)],
+    [(2800, 250 + PLATFORM_OFFSET_Y), (2820, 210 + PLATFORM_OFFSET_Y), (2840, 250 + PLATFORM_OFFSET_Y)],
+    [(2840, 250 + PLATFORM_OFFSET_Y), (2860, 210 + PLATFORM_OFFSET_Y), (2880, 250 + PLATFORM_OFFSET_Y)],
+    [(2880, 250 + PLATFORM_OFFSET_Y), (2900, 210 + PLATFORM_OFFSET_Y), (2920, 250 + PLATFORM_OFFSET_Y)],
+    [(3020, 250 + PLATFORM_OFFSET_Y), (3040, 210 + PLATFORM_OFFSET_Y), (3060, 250 + PLATFORM_OFFSET_Y)],
 ]
-spike_rects = [pygame.Rect(2000, 260, 120, 40),pygame.Rect(2800, 210, 120, 40),pygame.Rect(3020, 210, 40, 40),]
+spike_rects = [
+    pygame.Rect(2000, 260 + PLATFORM_OFFSET_Y, 120, 40),
+    pygame.Rect(2800, 210 + PLATFORM_OFFSET_Y, 120, 40),
+    pygame.Rect(3020, 210 + PLATFORM_OFFSET_Y, 40, 40),
+]
 
-# Falling spikes
 falling_spikes = [
-    {"points": [(2400, 40), (2420, 80), (2440, 40)], "trigger_x": 2400, "falling": False, "dy": 0},
-    {"points": [(2440, 40), (2460, 80), (2480, 40)], "trigger_x": 2440, "falling": False, "dy": 0},
-    {"points": [(2480, 40), (2500, 80), (2520, 40)], "trigger_x": 2480, "falling": False, "dy": 0},
+    {"points": [(2400, 40 + PLATFORM_OFFSET_Y), (2420, 80 + PLATFORM_OFFSET_Y), (2440, 40 + PLATFORM_OFFSET_Y)], "trigger_x": 2400, "falling": False, "dy": 0},
+    {"points": [(2440, 40 + PLATFORM_OFFSET_Y), (2460, 80 + PLATFORM_OFFSET_Y), (2480, 40 + PLATFORM_OFFSET_Y)], "trigger_x": 2440, "falling": False, "dy": 0},
+    {"points": [(2480, 40 + PLATFORM_OFFSET_Y), (2500, 80 + PLATFORM_OFFSET_Y), (2520, 40 + PLATFORM_OFFSET_Y)], "trigger_x": 2480, "falling": False, "dy": 0},
 ]
 
 spike_color = (125, 106, 74)
 
-water = pygame.Rect(3650, 300, 60, 50)
-alien = pygame.Rect(300, 390, 60, 60)
-alien2 = pygame.Rect(1600, 180, 65, 70)
+water = pygame.Rect(3650, 300 + PLATFORM_OFFSET_Y, 60, 50)
+alien = pygame.Rect(300, 390 + PLATFORM_OFFSET_Y, 60, 60)
+alien2 = pygame.Rect(1600, 180 + PLATFORM_OFFSET_Y, 65, 70)
 alien2_direction = 1
-alien3 = pygame.Rect(3550, 290, 60, 60)
+alien3 = pygame.Rect(3550, 290 + PLATFORM_OFFSET_Y, 60, 60)
 alien3_direction = 1
-ok = 0   
-volcano = pygame.Rect(1250, 240, 80, 60)
+ok = 0
+volcano = pygame.Rect(1250, 240 + PLATFORM_OFFSET_Y, 80, 60)
 fireballs = []
 
 camera_x = 0
 
 def reset_game():
     global player, velocity_y, oxygen, game_over, game_win, fireballs, ok
-    player.x, player.y = 100, 500
+    player.x, player.y = 100, 500 + PLATFORM_OFFSET_Y
     velocity_y = 0
     oxygen = 100
     game_over = False
@@ -113,20 +111,17 @@ def reset_game():
     for spike in falling_spikes:
         spike["falling"] = False
         spike["dy"] = 0
-    falling_spikes[0]["points"] = [(2400, 40), (2420, 80), (2440, 40)]
-    falling_spikes[1]["points"] = [(2440, 40), (2460, 80), (2480, 40)]
-    falling_spikes[2]["points"] = [(2480, 40), (2500, 80), (2520, 40)]
-    alien3.x, alien3.y = 3550, 290
+    falling_spikes[0]["points"] = [(2400, 40 + PLATFORM_OFFSET_Y), (2420, 80 + PLATFORM_OFFSET_Y), (2440, 40 + PLATFORM_OFFSET_Y)]
+    falling_spikes[1]["points"] = [(2440, 40 + PLATFORM_OFFSET_Y), (2460, 80 + PLATFORM_OFFSET_Y), (2480, 40 + PLATFORM_OFFSET_Y)]
+    falling_spikes[2]["points"] = [(2480, 40 + PLATFORM_OFFSET_Y), (2500, 80 + PLATFORM_OFFSET_Y), (2520, 40 + PLATFORM_OFFSET_Y)]
+    alien3.x, alien3.y = 3550, 290 + PLATFORM_OFFSET_Y
     ok = 0
-
-
 
 def spawn_fireball():
     fireballs.append(pygame.Rect(volcano.x, volcano.y + 20, 20, 20))
 
 spawn_timer = 0
 
-# Main loop
 while True:
     screen.blit(bg_img, (-camera_x * 0.2, 0))
 
@@ -139,7 +134,8 @@ while True:
     if keys[pygame.K_ESCAPE]:
         import menu
         menu.main()
-    if keys[pygame.K_r]: reset_game()
+    if keys[pygame.K_r]:
+        reset_game()
 
     if not game_over and not game_win:
         dx = 0
@@ -170,14 +166,12 @@ while True:
             if player.colliderect(rect):
                 game_over = True
 
-        # Falling spikes logic
         for spike in falling_spikes:
-            if not spike["falling"] and player.x >= spike["trigger_x"]-40:
+            if not spike["falling"] and player.x >= spike["trigger_x"] - 40:
                 spike["falling"] = True
             if spike["falling"]:
                 spike["dy"] += 1.5
                 spike["points"] = [(x, y + spike["dy"]) for (x, y) in spike["points"]]
-
                 spike_rect = pygame.Rect(
                     min(p[0] for p in spike["points"]),
                     min(p[1] for p in spike["points"]),
@@ -192,7 +186,7 @@ while True:
             game_over = True
         if player.colliderect(water):
             game_win = True
-        if player.y> 600:
+        if player.y > HEIGHT:
             game_over = True
         if player.x > WIDTH // 2:
             camera_x = player.x - WIDTH // 2
@@ -201,17 +195,15 @@ while True:
 
         alien2.x += alien2_direction * 2
         if alien2.x < 1500 or alien2.x > 1750:
-            alien2_direction *= -1 
-        if (player.x>= 3150 and player.y>= 300) or ok==1:
+            alien2_direction *= -1
+        if (player.x >= 3150 and player.y >= 300 + PLATFORM_OFFSET_Y) or ok == 1:
             ok = 1
-            if alien3.x<=3200:
+            if alien3.x <= 3200:
                 ok = 2
-            elif (alien3.x<=3550  or alien3.x >= 3200) and ok == 1:
-                alien3.x += alien3_direction*10
-                if alien3.x<3200 or alien3.x>3550:
+            elif (alien3.x <= 3550 or alien3.x >= 3200) and ok == 1:
+                alien3.x += alien3_direction * 10
+                if alien3.x < 3200 or alien3.x > 3550:
                     alien3_direction *= -1
-
-
 
         spawn_timer += 1
         if spawn_timer > 120:
@@ -225,7 +217,6 @@ while True:
             if fireball.right < 0:
                 fireballs.remove(fireball)
 
-    # Draw
     for plat in platforms:
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y, plat.width, plat.height))
     for spike in spikes:
@@ -235,18 +226,15 @@ while True:
 
     screen.blit(alien_img, (alien.x - camera_x, alien.y))
     if ok >= 1:
-            screen.blit(alien2_image, (alien3.x - camera_x, alien3.y-10))
+        screen.blit(alien2_image, (alien3.x - camera_x, alien3.y - 10))
     else:
         screen.blit(alien_img, (alien3.x - camera_x, alien3.y))
-
     screen.blit(alien2_image, (alien2.x - camera_x, alien2.y))
-
     screen.blit(water_img, (water.x - camera_x, water.y))
     screen.blit(volcano_img, (volcano.x - camera_x, volcano.y))
-
     for fb in fireballs:
         screen.blit(fireball_img, (fb.x - camera_x, fb.y))
-    # PLAYER ANIMATION
+
     is_jumping = velocity_y < -1
     is_falling = velocity_y > 1
     if is_falling or is_jumping:
