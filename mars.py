@@ -132,8 +132,8 @@ while True:
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_ESCAPE]:
-        import menu
-        menu.main()
+        import main
+        main.main()
     if keys[pygame.K_r]:
         reset_game()
 
