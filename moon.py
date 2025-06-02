@@ -85,10 +85,9 @@ camera_x = 0
 min_camera_y = 1560 + PLATFORM_OFFSET_Y - HEIGHT
 first_platform_y = 1560 + PLATFORM_OFFSET_Y  # first platform’s Y position
 
-if player.y < first_platform_y - 10:
-    camera_y = max(min_camera_y, player.y - HEIGHT // 2)
-else:
-    camera_y = min_camera_y
+target_camera_y = player.y - HEIGHT // 2
+lowest_allowed_y = first_platform_y - HEIGHT  # Bottom limit (don't see below 1st platform)
+camera_y = min(target_camera_y, lowest_allowed_y)
 
 
 show_mask_msg = False
@@ -129,7 +128,7 @@ while True:
         screen.fill((50, 50, 50))
         satellite.y = -999
     else:
-        screen.blit(bg_img, (-camera_x * 0.2, -camera_y * 0.2))
+        screen.blit(bg_img, (-camera_x * 0.2, HEIGHT - bg_img.get_height()))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -192,10 +191,9 @@ while True:
         min_camera_y = 1560 + PLATFORM_OFFSET_Y - HEIGHT
         first_platform_y = 1560 + PLATFORM_OFFSET_Y  # first platform’s Y position
 
-        if player.y < first_platform_y - 10:
-            camera_y = max(min_camera_y, player.y - HEIGHT // 2)
-        else:
-            camera_y = min_camera_y
+        target_camera_y = player.y - HEIGHT // 2
+        lowest_allowed_y = first_platform_y - HEIGHT  # Bottom limit (don't see below 1st platform)
+        camera_y = min(target_camera_y, lowest_allowed_y)
 
 
         spawn_timer += 1
