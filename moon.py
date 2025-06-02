@@ -1,22 +1,21 @@
 import pygame, sys, random
 
 pygame.init()
-WIDTH, HEIGHT = 1200, 800
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+WIDTH, HEIGHT = screen.get_size()
 pygame.display.set_caption("Moon Escape")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 36)
 
 # Load images
 bg_img = pygame.image.load("assets/moon_background.png").convert()
-bg_img = pygame.transform.scale(bg_img, (2000, 1200))
+bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
 
 player_stand = pygame.image.load("assets/player_stand.png").convert_alpha()
 player_walk_1 = pygame.image.load("assets/player_walk_1.png").convert_alpha()
 player_walk_2 = pygame.image.load("assets/player_walk_2.png").convert_alpha()
 player_jump = pygame.image.load("assets/jump.png").convert_alpha()
 
-# Scale all player images
 player_stand = pygame.transform.scale(player_stand, (40, 50))
 player_walk_1 = pygame.transform.scale(player_walk_1, (40, 50))
 player_walk_2 = pygame.transform.scale(player_walk_2, (40, 50))
@@ -38,14 +37,12 @@ meteor_img = pygame.transform.scale(meteor_img, (40, 60))
 dark_bg_img = bg_img.copy()
 dark_bg_img.fill((50, 50, 50), special_flags=pygame.BLEND_RGB_MULT)
 
-# Game constants
 PLAYER_SPEED = 5
 GRAVITY = 0.1
 JUMP_STRENGTH = -6
 OXYGEN_DECREASE = 0.1
 
-# Player
-player = pygame.Rect(100, 1500, 40, 50)
+player = pygame.Rect(100, 1510, 40, 50)
 velocity_y = 0
 on_ground = False
 oxygen = 100
@@ -54,12 +51,10 @@ game_win = False
 jump_sound = pygame.mixer.Sound('audio/jump.mp3')
 jump_sound.set_volume(0.1)
 
-# Animation
 walk_index = 0
 walk_timer = 0
 facing_right = True
 
-# Level setup
 platforms = [
     pygame.Rect(0, 1560, 4000, 20),
     pygame.Rect(200, 1370, 100, 20),
@@ -85,14 +80,15 @@ meteor_timer = 0
 meteor_active = False
 
 camera_x = 0
-camera_y = 0
+min_camera_y = 1560 - HEIGHT
+camera_y = max(min_camera_y, player.y - HEIGHT // 2)
 
 show_mask_msg = False
-mask_msg_timer = 180  # 3 seconds
+mask_msg_timer = 180
 
 def reset_game():
     global player, velocity_y, oxygen, game_over, game_win, lasers, mask_gotten, show_mask_msg, mask_msg_timer, meteors, meteor_active
-    player.x, player.y = 100, 1500
+    player.x, player.y = 100, 1510
     satellite.y = 770
     velocity_y = 0
     oxygen = 100
@@ -116,10 +112,10 @@ def spawn_meteor():
 
 spawn_timer = 0
 
-# Glowy lights positions (to simulate guidance)
-glow_positions = [(1750, 560), (1470,400), (1125, 240), (1525, 140), (2225, 240), (2815, 330), (2835, 330), (2855, 330), (2875, 330), (2895, 330), (2915, 330), (2935, 330), (2955, 330), (2975, 330), (2995, 330), (3015, 330), (3035, 330), (3055, 330), (3075, 330), (3095, 330), (3115, 330), (3135, 330)]
+glow_positions = [(1750, 560), (1470,400), (1125, 240), (1525, 140), (2225, 240), (2815, 330),
+(2835, 330), (2855, 330), (2875, 330), (2895, 330), (2915, 330), (2935, 330), (2955, 330), (2975, 330), 
+(2995, 330), (3015, 330), (3035, 330), (3055, 330), (3075, 330), (3095, 330), (3115, 330), (3135, 330)]
 
-# Main loop
 while True:
     if mask_gotten:
         screen.fill((50, 50, 50))
@@ -134,8 +130,8 @@ while True:
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_ESCAPE]:
-        import menu
-        menu.main()
+        import main
+        main.main()
     if keys[pygame.K_r]:
         reset_game()
 
@@ -163,8 +159,7 @@ while True:
                     player.bottom = plat.top
                     velocity_y = 0
                     on_ground = True
-
-                    if plat.x == 2800 and plat.y == 350 and meteor_active == False:
+                    if plat.x == 2800 and plat.y == 350 and not meteor_active:
                         oxygen = 100
                         meteor_active = True
 
@@ -185,9 +180,9 @@ while True:
             game_over = True
         oxygen -= OXYGEN_DECREASE
 
-        # Camera follows player
         camera_x = max(0, player.x - WIDTH // 2)
-        camera_y = max(0, player.y - HEIGHT // 2)
+        min_camera_y = 1560 - HEIGHT
+        camera_y = max(min_camera_y, player.y - HEIGHT // 2)
 
         spawn_timer += 1
         if spawn_timer > 110:
@@ -204,13 +199,11 @@ while True:
             if laser.right < 0:
                 lasers.remove(laser)
 
-
-
         if meteor_active:
             msg = font.render("Oh no a meteor rain! Survive until we come and save you!", True, (255, 255, 255))
             screen.blit(msg, (WIDTH // 2 - 250, 100))
             meteor_timer += 1
-            if player.y>330:
+            if player.y > 330:
                 game_over = True
             if meteor_timer > 15:
                 spawn_meteor()
@@ -224,30 +217,23 @@ while True:
                     meteors.remove(meteor)
             if oxygen < 5:
                 game_win = True
-            
 
-    # Draw platforms
     for plat in platforms:
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y - camera_y, plat.width, plat.height))
 
-    # Draw satellite and mask
     screen.blit(mask_img, (mask.x - camera_x, mask.y - camera_y))
     screen.blit(satellite_img, (satellite.x - camera_x, satellite.y - camera_y))
 
-    # Draw lasers
     for l in lasers:
         screen.blit(laser_img, (l.x - camera_x, l.y - camera_y))
 
-    # Draw meteors
     for m in meteors:
         screen.blit(meteor_img, (m.x - camera_x, m.y - camera_y))
 
-    # Draw glowy lights
     if mask_gotten:
         for gx, gy in glow_positions:
             pygame.draw.circle(screen, (100, 255, 255), (gx - camera_x, gy - camera_y), 8)
 
-    # PLAYER ANIMATION
     is_jumping = velocity_y < -1
     is_falling = velocity_y > 1
     if is_falling or is_jumping:
@@ -266,12 +252,10 @@ while True:
 
     screen.blit(current_img, (player.x - camera_x, player.y - camera_y))
 
-    # Oxygen bar
     pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
     pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
     screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
 
-    # Mask message
     if show_mask_msg and mask_msg_timer > 0:
         msg = font.render("You got the mask! But it's harder to see...", True, (255, 255, 255))
         screen.blit(msg, (WIDTH // 2 - 250, 100))
