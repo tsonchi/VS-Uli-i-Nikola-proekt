@@ -10,8 +10,14 @@ WIDTH, HEIGHT = info.current_w, info.current_h
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Main Menu")
 
-pygame.mixer.init()
-pygame.mixer.music.set_volume(0.07)  
+try:
+    pygame.mixer.init()
+except pygame.error:
+    print("Warning: Mixer failed to initialize.")
+
+target_volume = 0.07
+current_volume = 0.0
+fade_in_speed = 0.0005 
 music_started = False
 
 jump_sound = pygame.mixer.Sound("audio/jump.mp3")
@@ -136,23 +142,33 @@ while True:
                 if choice < 1:
                     choice = MAX_CHOICES
             elif event.key == pygame.K_RETURN:
-                pygame.display.set_mode((WIDTH, HEIGHT))
-                pygame.quit()
                 if choice == 1:
-                    run_game("mars.py")
+                    next_game = "mars.py"
                 elif choice == 2:
-                    run_game("moon.py")
+                    next_game = "moon.py"
                 elif choice == 3:
-                    run_game("earth.py")
+                    next_game = "earth.py"
                 elif choice == 4:
+                    pygame.quit()
                     sys.exit()
+
+                pygame.quit()
+                run_game(next_game)
+                sys.exit()
+
             elif event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 sys.exit()
         elif event.type == pygame.USEREVENT and not music_started:
             pygame.mixer.music.load("audio/title.wav")
-            pygame.mixer.music.play(-1, fade_ms=2000) 
-            music_started = True 
+            pygame.mixer.music.set_volume(0.0)
+            pygame.mixer.music.play(-1)
+            music_started = True
+
+    if music_started and current_volume < target_volume:
+        current_volume = min(current_volume + fade_in_speed, target_volume)
+        if pygame.mixer.get_init():
+            pygame.mixer.music.set_volume(current_volume)
 
     pygame.display.flip()
     clock.tick(60)
