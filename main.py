@@ -11,11 +11,11 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCA
 pygame.display.set_caption("Main Menu")
 
 pygame.mixer.init()
-pygame.mixer.music.set_volume(0.2)  
+pygame.mixer.music.set_volume(0.07)  
 music_started = False
 
 jump_sound = pygame.mixer.Sound("audio/jump.mp3")
-jump_sound.set_volume(0.1)
+jump_sound.set_volume(0.05)
 jump_sound.play()
 
 pygame.time.set_timer(pygame.USEREVENT, int(jump_sound.get_length() * 1000))
@@ -150,7 +150,7 @@ while True:
                 pygame.quit()
                 sys.exit()
         elif event.type == pygame.USEREVENT and not music_started:
-            pygame.mixer.music.load("audio/music.wav")
+            pygame.mixer.music.load("audio/title.wav")
             pygame.mixer.music.play(-1, fade_ms=2000) 
             music_started = True 
 
