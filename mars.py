@@ -11,7 +11,7 @@ font = pygame.font.SysFont(None, 36)
 PLATFORM_OFFSET_Y = HEIGHT - 600
 
 bg_img = pygame.image.load("assets/background.png").convert()
-bg_img = pygame.transform.scale(bg_img, (2000, HEIGHT))
+bg_img = pygame.transform.scale(bg_img, (WIDTH + PLATFORM_OFFSET_Y, HEIGHT))
 
 alien_img = pygame.image.load("assets/alien.png").convert_alpha()
 alien_img = pygame.transform.scale(alien_img, (60, 60))

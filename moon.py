@@ -8,10 +8,10 @@ pygame.display.set_caption("Moon Path")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 36)
 
-PLATFORM_OFFSET_Y = 0
+PLATFORM_OFFSET_Y = HEIGHT
 
 bg_img = pygame.image.load("assets/moon_background.png").convert()
-bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
+bg_img = pygame.transform.scale(bg_img, (WIDTH + PLATFORM_OFFSET_Y, HEIGHT))
 
 dark_bg_img = bg_img.copy()
 dark_bg_img.fill((50, 50, 50), special_flags=pygame.BLEND_RGB_MULT)
