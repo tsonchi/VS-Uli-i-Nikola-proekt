@@ -34,7 +34,7 @@ highlight_padding_x = int(WIDTH * 0.035)
 highlight_padding_y = int(HEIGHT * 0.02)
 
 random.seed(42)
-NUM_STARS = 300
+NUM_STARS = 420
 stars = [(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(NUM_STARS)]
 
 alien_img = pygame.image.load("assets/alien.png").convert_alpha()
