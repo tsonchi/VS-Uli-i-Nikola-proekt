@@ -17,8 +17,8 @@ bg_img = pygame.transform.scale(bg_img, (WIDTH + PLATFORM_OFFSET_Y, HEIGHT))
 
 alien_img = pygame.image.load("assets/alien.png").convert_alpha()
 alien_img = pygame.transform.scale(alien_img, (60, 60))
-water_img = pygame.image.load("assets/water.png")
-water_img = pygame.transform.scale(water_img, (60, 50))
+rocket_img = pygame.image.load("assets/rocket1.png")
+rocket_img = pygame.transform.scale(rocket_img, (60, 80))
 volcano_img = pygame.image.load("assets/volcano.png")
 volcano_img = pygame.transform.scale(volcano_img, (80, 60))
 fireball_img = pygame.image.load("assets/fireball.png")
@@ -94,7 +94,7 @@ falling_spikes = [
 
 spike_color = (125, 106, 74)
 
-water = pygame.Rect(3650, 300 + PLATFORM_OFFSET_Y, 60, 50)
+rocket = pygame.Rect(3650, 270 + PLATFORM_OFFSET_Y, 60, 50)
 alien = pygame.Rect(300, 390 + PLATFORM_OFFSET_Y, 60, 60)
 alien2 = pygame.Rect(1600, 180 + PLATFORM_OFFSET_Y, 65, 70)
 alien2_direction = 1
@@ -206,7 +206,7 @@ while True:
         oxygen -= OXYGEN_DECREASE
         if oxygen <= 0 or player.colliderect(alien) or player.colliderect(alien2) or player.colliderect(alien3):
             game_over = True
-        if player.colliderect(water):
+        if player.colliderect(rocket):
             game_win = True
         if player.y > HEIGHT:
             game_over = True
@@ -252,7 +252,7 @@ while True:
     else:
         screen.blit(alien_img, (alien3.x - camera_x, alien3.y))
     screen.blit(alien2_image, (alien2.x - camera_x, alien2.y))
-    screen.blit(water_img, (water.x - camera_x, water.y))
+    screen.blit(rocket_img, (rocket.x - camera_x, rocket.y))
     screen.blit(volcano_img, (volcano.x - camera_x, volcano.y))
     for fb in fireballs:
         screen.blit(fireball_img, (fb.x - camera_x, fb.y))
@@ -283,7 +283,9 @@ while True:
         msg = font.render("Game Over!", True, (255, 0, 0))
         screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
     elif game_win:
-        msg = font.render("YOU WON!!!!", True, (0, 255, 0))
+        msg = font.render("YOU WON!!!! Onto the next level", True, (0, 255, 0))
+        import moon
+        moon.main()
         screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
 
     if paused:

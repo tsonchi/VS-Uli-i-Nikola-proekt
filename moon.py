@@ -1,4 +1,4 @@
-import pygame, sys, random
+import pygame, sys, random, math
 
 pygame.init()
 info = pygame.display.Info()
@@ -6,8 +6,8 @@ WIDTH, HEIGHT = info.current_w, info.current_h
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Moon Path")
 clock = pygame.time.Clock()
-font = pygame.font.SysFont(None, 36)
-
+font_size = int(HEIGHT * 0.05)
+font = pygame.font.SysFont("arial", font_size, bold=True)
 PLATFORM_OFFSET_Y = HEIGHT
 
 bg_img = pygame.image.load("assets/moon_background.png").convert()
@@ -89,6 +89,9 @@ target_camera_y = player.y - HEIGHT // 2
 lowest_allowed_y = first_platform_y - HEIGHT  # Bottom limit (don't see below 1st platform)
 camera_y = min(target_camera_y, lowest_allowed_y)
 
+paused = False
+pause_options = ["Continue", "Restart Level", "Main Menu"]
+pause_choice = 1
 
 show_mask_msg = False
 mask_msg_timer = 180
@@ -134,15 +137,34 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                paused = not paused
+            elif paused:
+                if event.key == pygame.K_UP:
+                    pause_choice -= 1
+                    if pause_choice < 1:
+                        pause_choice = len(pause_options)
+                elif event.key == pygame.K_DOWN:
+                    pause_choice += 1
+                    if pause_choice > len(pause_options):
+                        pause_choice = 1
+                elif event.key == pygame.K_RETURN:
+                    if pause_choice == 1:
+                        paused = False
+                    elif pause_choice == 2:
+                        reset_game()
+                        paused = False
+                    elif pause_choice == 3:
+                        import main
+                        main.main()
+
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_ESCAPE]:
-        import main
-        main.main()
     if keys[pygame.K_r]:
         reset_game()
 
-    if not game_over and not game_win:
+    if not paused and not game_over and not game_win:
         dx = 0
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             dx = -PLAYER_SPEED
@@ -281,6 +303,33 @@ while True:
     elif game_win:
         msg = font.render("YOU GOT SAVED ON TIME THANK GOD! YOU WON!!!", True, (0, 255, 0))
         screen.blit(msg, (WIDTH // 2 - 300, HEIGHT // 2))
+    if paused:
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
 
+        pause_title_font = pygame.font.SysFont("arial", int(font_size * 1.2), bold=True)
+        pause_help_font = pygame.font.SysFont("arial", int(font_size * 0.6))
+        paused_text = pause_title_font.render("PAUSED", True, (255, 255, 255))
+        paused_rect = paused_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 160))
+        screen.blit(paused_text, paused_rect)
+
+        help_lines = ["Use UP and DOWN to navigate", "Press ENTER to choose"]
+        for i, line in enumerate(help_lines):
+            txt = pause_help_font.render(line, True, (255, 255, 255))
+            rect = txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 110 + i * 30))
+            screen.blit(txt, rect)
+
+
+        pause_font = pygame.font.SysFont("arial", font_size, bold=True)
+        for i, opt in enumerate(pause_options):
+            y = HEIGHT // 2 + i * 70
+            color = (255, 255, 255)
+            surf = pause_font.render(opt, True, color)
+            rect = surf.get_rect(center=(WIDTH // 2, y))
+            if pause_choice == i + 1:
+                pulse = int(100 + 80 * math.sin(pygame.time.get_ticks() * 0.005))
+                pygame.draw.rect(screen, (pulse, pulse, pulse), rect.inflate(40, 20), border_radius=12)
+            screen.blit(surf, rect)
     pygame.display.flip()
     clock.tick(60)
