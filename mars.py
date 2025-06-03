@@ -113,26 +113,55 @@ camera_x = 0
 
 def game_over_cause():
     global death_cause
-    if player.colliderect(rect):
-        death_cause = "Spikes"
 
-    if player.colliderect(spike_rect):
-        death_cause = "Falling Spike"
+    # 1) Check stationary spikes:
+    for rect in spike_rects:
+        if player.colliderect(rect):
+            death_cause = "Spikes"
+            return
 
+    # 2) Check any currently-falling spike polygons:
+    for spike in falling_spikes:
+        # Reconstruct its bounding Rect from spike["points"]:
+        spike_rect = pygame.Rect(
+            min(p[0] for p in spike["points"]),
+            min(p[1] for p in spike["points"]),
+            max(p[0] for p in spike["points"]) - min(p[0] for p in spike["points"]),
+            max(p[1] for p in spike["points"]) - min(p[1] for p in spike["points"])
+        )
+        if player.colliderect(spike_rect):
+            death_cause = "Falling Spike"
+            return
+
+    # 3) Ran out of oxygen?
     if oxygen <= 0:
         death_cause = "Ran Out of Oxygen"
-    elif player.colliderect(alien):
-        death_cause = "Alien 1"
-    elif player.colliderect(alien2):
-        death_cause = "Alien 2"
-    elif player.colliderect(alien3):
-        death_cause = "Alien 3"
+        return
 
+    # 4) Alien collisions:
+    if player.colliderect(alien):
+        death_cause = "Alien 1"
+        return
+    if player.colliderect(alien2):
+        death_cause = "Alien 2"
+        return
+    if player.colliderect(alien3):
+        death_cause = "Alien 3"
+        return
+
+    # 5) Fell off bottom of the map:
     if player.y > HEIGHT:
         death_cause = "Fell Off the Map"
+        return
 
-    if fireball.colliderect(player):
-        death_cause = "Fireball"
+    # 6) Fireball collisions:
+    for fb in fireballs:
+        if fb.colliderect(player):
+            death_cause = "Fireball"
+            return
+
+    # (If nothing else matched, you could set a default cause here.)
+    death_cause = "Unknown"
 
 
 def reset_game():
@@ -157,6 +186,8 @@ def spawn_fireball():
 
 spawn_timer = 0
 
+# … (everything up through event handling stays the same) …
+
 while True:
     screen.blit(bg_img, (-camera_x * 0.2, 0))
 
@@ -164,10 +195,27 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                paused = not paused
-            elif paused:
+        
+        if game_over:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    death_choice -= 1
+                    if death_choice < 1:
+                        death_choice = len(death_options)
+                elif event.key == pygame.K_DOWN:
+                    death_choice += 1
+                    if death_choice > len(death_options):
+                        death_choice = 1
+                elif event.key == pygame.K_RETURN:
+                    if death_choice == 1:
+                        reset_game()
+                    elif death_choice == 2:
+                        import main
+                        main.main()
+            continue  # Important! Skip all other event handling when dead
+
+        if paused:
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     pause_choice -= 1
                     if pause_choice < 1:
@@ -185,55 +233,50 @@ while True:
                     elif pause_choice == 3:
                         import main
                         main.main()
+            continue  # Ignore other keys while paused
+
+        # Only allow ESC to pause when not paused, not dead, not won
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            paused = not paused
+
 
     keys = pygame.key.get_pressed()
 
+    # ─── Normal gameplay: movement, physics, oxygen, collisions, camera, enemy AI ───
     if not paused and not game_over and not game_win:
+        # 1) Figure out horizontal input:
         dx = 0
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             dx = -PLAYER_SPEED
             facing_right = False
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            dx = PLAYER_SPEED
+            dx =  PLAYER_SPEED
             facing_right = True
+
+        # 2) Jump:
         if (keys[pygame.K_SPACE] or keys[pygame.K_w] or keys[pygame.K_UP]) and on_ground:
             velocity_y = JUMP_STRENGTH
             on_ground = False
             jump_sound.play()
-    elif game_over:
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                death_choice -= 1
-                if death_choice < 1:
-                    death_choice = len(death_options)
-            elif event.key == pygame.K_DOWN:
-                death_choice += 1
-                if death_choice > len(death_options):
-                    death_choice = 1
-            elif event.key == pygame.K_RETURN:
-                if death_choice == 1:
-                    reset_game()
-                elif death_choice == 2:
-                    import main
-                    main.main()
 
+        # 3) Apply gravity to vertical velocity:
         velocity_y += GRAVITY
-        player.y += velocity_y
+        player.y   += velocity_y
+
+        # 4) Move horizontally:
         player.x += dx
 
+        # 5) Ground‐check & platform collisions:
         on_ground = False
         for plat in platforms:
             if player.colliderect(plat):
+                # Only land if we were falling onto it:
                 if velocity_y > 0 and player.bottom <= plat.bottom:
-                    player.bottom = plat.top
-                    velocity_y = 0
-                    on_ground = True
+                    player.bottom   = plat.top
+                    velocity_y      = 0
+                    on_ground       = True
 
-        for rect in spike_rects:
-            if player.colliderect(rect):
-                game_over = True
-                game_over_cause()
-
+        # 6) Trigger falling spikes and check for collisions:
         for spike in falling_spikes:
             if not spike["falling"] and player.x >= spike["trigger_x"] - 40:
                 spike["falling"] = True
@@ -250,23 +293,38 @@ while True:
                     game_over = True
                     game_over_cause()
 
+        # 7) Decrease oxygen each frame:
         oxygen -= OXYGEN_DECREASE
-        if oxygen <= 0 or player.colliderect(alien) or player.colliderect(alien2) or player.colliderect(alien3):
+        if oxygen <= 0:
             game_over = True
             game_over_cause()
+
+        # 8) Check alien collisions:
+        if player.colliderect(alien) or player.colliderect(alien2) or player.colliderect(alien3):
+            game_over = True
+            game_over_cause()
+
+        # 9) Check rocket win:
         if player.colliderect(rocket):
             game_win = True
+
+        # 10) If the player falls off the bottom of the screen:
         if player.y > HEIGHT:
             game_over = True
             game_over_cause()
+
+        # 11) Move camera so player stays near center:
         if player.x > WIDTH // 2:
             camera_x = player.x - WIDTH // 2
         else:
             camera_x = 0
 
+        # 12) Alien #2 patrol logic:
         alien2.x += alien2_direction * 2
         if alien2.x < 1500 or alien2.x > 1750:
             alien2_direction *= -1
+
+        # 13) Alien #3 activation:
         if (player.x >= 3150 and player.y >= 300 + PLATFORM_OFFSET_Y) or ok == 1:
             ok = 1
             if alien3.x <= 3200:
@@ -276,6 +334,7 @@ while True:
                 if alien3.x < 3200 or alien3.x > 3550:
                     alien3_direction *= -1
 
+        # 14) Volcano spawns fireballs periodically:
         spawn_timer += 1
         if spawn_timer > 120:
             spawn_fireball()
@@ -289,6 +348,29 @@ while True:
             if fireball.right < 0:
                 fireballs.remove(fireball)
 
+    # ─── HANDLE INPUT / MOTION WHEN game_over IS TRUE ─────────────────────────────────
+    elif game_over:
+        # Only handle up/down/enter to navigate death menu here; do not re‐run physics!
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    death_choice -= 1
+                    if death_choice < 1:
+                        death_choice = len(death_options)
+                elif event.key == pygame.K_DOWN:
+                    death_choice += 1
+                    if death_choice > len(death_options):
+                        death_choice = 1
+                elif event.key == pygame.K_RETURN:
+                    if death_choice == 1:
+                        reset_game()
+                    elif death_choice == 2:
+                        import main
+                        main.main()
+
+
+    # ─── DRAW EVERYTHING ───────────────────────────────────────────────────────────────
+    # (Platforms, spikes, aliens, rocket, etc. all go here, exactly as before)
     for plat in platforms:
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y, plat.width, plat.height))
     for spike in spikes:
@@ -307,11 +389,12 @@ while True:
     for fb in fireballs:
         screen.blit(fireball_img, (fb.x - camera_x, fb.y))
 
+    # ─── PLAYER ANIMATION & DRAW ────────────────────────────────────────────────────
     is_jumping = velocity_y < -1
     is_falling = velocity_y > 1
     if is_falling or is_jumping:
         current_img = player_jump
-    elif dx != 0:
+    elif 'dx' in locals() and dx != 0:   # make sure dx exists
         walk_timer += 1
         if walk_timer >= 10:
             walk_timer = 0
@@ -325,13 +408,15 @@ while True:
 
     screen.blit(current_img, (player.x - camera_x, player.y))
 
+    # ─── OXYGEN BAR ─────────────────────────────────────────────────────────────────
     pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
     pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
     screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
 
+    # ─── IF GAME OVER: DRAW DEATH OVERLAY & MENU ─────────────────────────────────────
     if game_over:
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 200))
+        overlay.fill((0, 0, 0, 180))
         screen.blit(overlay, (0, 0))
 
         death_title = font.render("YOU DIED", True, (255, 0, 0))
@@ -348,35 +433,35 @@ while True:
                 pygame.draw.rect(screen, (200, 0, 0), rect.inflate(40, 20), border_radius=12)
             screen.blit(txt, rect)
 
+    # ─── IF GAME WIN: TRIGGER NEXT LEVEL ────────────────────────────────────────────
     elif game_win:
         msg = font.render("YOU WON!!!! Onto the next level", True, (0, 255, 0))
         import moon
         moon.main()
         screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
 
+    # ─── IF PAUSED: DRAW PAUSE OVERLAY & MENU ───────────────────────────────────────
     if paused:
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
         screen.blit(overlay, (0, 0))
 
         pause_title_font = pygame.font.SysFont("arial", int(font_size * 1.2), bold=True)
-        pause_help_font = pygame.font.SysFont("arial", int(font_size * 0.6))
-        paused_text = pause_title_font.render("PAUSED", True, (255, 255, 255))
-        paused_rect = paused_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 160))
+        pause_help_font  = pygame.font.SysFont("arial", int(font_size * 0.6))
+        paused_text      = pause_title_font.render("PAUSED", True, (255, 255, 255))
+        paused_rect      = paused_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 160))
         screen.blit(paused_text, paused_rect)
 
         help_lines = ["Use UP and DOWN to navigate", "Press ENTER to choose"]
         for i, line in enumerate(help_lines):
-            txt = pause_help_font.render(line, True, (255, 255, 255))
+            txt  = pause_help_font.render(line, True, (255, 255, 255))
             rect = txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 110 + i * 30))
             screen.blit(txt, rect)
 
-
         pause_font = pygame.font.SysFont("arial", font_size, bold=True)
         for i, opt in enumerate(pause_options):
-            y = HEIGHT // 2 + i * 70
-            color = (255, 255, 255)
-            surf = pause_font.render(opt, True, color)
+            y    = HEIGHT // 2 + i * 70
+            surf = pause_font.render(opt, True, (255, 255, 255))
             rect = surf.get_rect(center=(WIDTH // 2, y))
             if pause_choice == i + 1:
                 pulse = int(100 + 80 * math.sin(pygame.time.get_ticks() * 0.005))
