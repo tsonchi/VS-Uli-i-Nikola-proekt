@@ -297,7 +297,7 @@ while True:
                     elif pause_choice == 2:
                         reset_game()
                         paused = False
-                    elif pause_choice == 2:
+                    elif pause_choice == 3:
                         pygame.mixer.music.fadeout(MUSIC_FADE_OUT_MS)
                         pygame.time.wait(MUSIC_FADE_OUT_MS + 100)  # Wait for fade out
                         import menu

@@ -42,6 +42,18 @@ meteor_img = pygame.transform.scale(meteor_img, (40, 60))
 rocket_img= pygame.image.load("assets/rocket1.png").convert_alpha()
 rocket_img = pygame.transform.scale(rocket_img, (60, 80))
 
+MUSIC_FADE_IN_MS = 3200    # Duration of music fade in (ms)
+MUSIC_FADE_OUT_MS = 1200   # Duration of music fade out (ms)
+MUSIC_PATH = "audio/level2.wav"
+
+pygame.mixer.music.load(MUSIC_PATH)
+pygame.mixer.music.set_volume(0.0)  # Start silent
+pygame.mixer.music.play(-1, fade_ms=MUSIC_FADE_IN_MS)
+target_music_volume = 0.07           # Set your preferred max volume here
+music_volume = 0.0
+music_fadein_active = True
+
+
 PLAYER_SPEED = 5
 GRAVITY = 0.1
 JUMP_STRENGTH = -6
@@ -264,6 +276,14 @@ while True:
             fade_in_alpha = 0
             fade_in_active = False
             start_screen = True
+        # At the end of the fade-in overlay section (right before pygame.display.flip()):
+        if music_fadein_active and music_volume < target_music_volume:
+            music_volume = min(target_music_volume, music_volume + 0.005)
+            if pygame.mixer.get_init():
+                pygame.mixer.music.set_volume(music_volume)
+            if music_volume >= target_music_volume:
+                music_fadein_active = False
+
         pygame.display.flip()
         clock.tick(60)
         for event in pygame.event.get():
@@ -317,6 +337,13 @@ while True:
         pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
         pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
         screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
+        if music_fadein_active and music_volume < target_music_volume:
+            music_volume = min(target_music_volume, music_volume + 0.005)
+            if pygame.mixer.get_init():
+                pygame.mixer.music.set_volume(music_volume)
+            if music_volume >= target_music_volume:
+                music_fadein_active = False
+
 
         # --- FLICKER TEXT ---
         if (pygame.time.get_ticks() // 500) % 2 == 0:
@@ -362,6 +389,9 @@ while True:
                     if death_choice == 1:
                         reset_game()
                     elif death_choice == 2:
+                        pygame.mixer.music.fadeout(MUSIC_FADE_OUT_MS)
+                        pygame.time.wait(MUSIC_FADE_OUT_MS + 150)
+
                         import menu
                         menu.main()
             continue  # Skip rest when dead
@@ -385,6 +415,9 @@ while True:
                         reset_game()
                         paused = False
                     elif pause_choice == 3:
+                        pygame.mixer.music.fadeout(MUSIC_FADE_OUT_MS)
+                        pygame.time.wait(MUSIC_FADE_OUT_MS + 150)
+
                         import menu
                         menu.main()
 
@@ -568,9 +601,10 @@ while True:
         if win_fade_alpha < 255:
             win_fade_alpha += 8
         else:
-            # If you want to continue to next level, do it here!
-            import menu
-            menu.main()
+            pygame.mixer.music.fadeout(MUSIC_FADE_OUT_MS)
+            pygame.time.wait(MUSIC_FADE_OUT_MS + 150)   # Wait so fadeout is heard before next scene
+            import earth
+            earth.main()
             break
 
     if paused:
@@ -611,6 +645,13 @@ while True:
             fade_in_alpha = 0
             fade_in_active = False
 
+    # Smooth fade-in for music at start
+    if music_fadein_active and music_volume < target_music_volume:
+        music_volume = min(target_music_volume, music_volume + 0.005)  # Adjust fade speed if needed
+        if pygame.mixer.get_init():
+            pygame.mixer.music.set_volume(music_volume)
+        if music_volume >= target_music_volume:
+            music_fadein_active = False
 
     pygame.display.flip()
     clock.tick(60)
