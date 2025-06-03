@@ -13,13 +13,13 @@ main_font = pygame.font.SysFont("arial", 40)
 skip_font = pygame.font.SysFont("arial", 20)
 PLATFORM_OFFSET_Y = HEIGHT - 600
 
-bg_img = pygame.image.load("assets/background.png").convert()
+bg_img = pygame.image.load("assets/earth_background.png").convert()
 bg_img = pygame.transform.scale(bg_img, (WIDTH + PLATFORM_OFFSET_Y, HEIGHT))
 BG_WIDTH = WIDTH + PLATFORM_OFFSET_Y
 
 alien_img = pygame.image.load("assets/alien.png").convert_alpha()
 alien_img = pygame.transform.scale(alien_img, (60, 60))
-rocket_img = pygame.image.load("assets/rocket1.png")
+rocket_img = pygame.image.load("assets/rocket2.png")
 rocket_img = pygame.transform.scale(rocket_img, (60, 80))
 volcano_img = pygame.image.load("assets/volcano.png")
 volcano_img = pygame.transform.scale(volcano_img, (80, 60))
