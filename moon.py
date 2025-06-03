@@ -48,14 +48,18 @@ player = pygame.Rect(100, 1510 + PLATFORM_OFFSET_Y, 40, 50)
 velocity_y = 0
 on_ground = False
 oxygen = 100
+
 game_over = False
 game_win = False
+death_cause = ""  # === NEW ===
 jump_sound = pygame.mixer.Sound('audio/jump.mp3')
 jump_sound.set_volume(0.05)
 
 walk_index = 0
 walk_timer = 0
 facing_right = True
+
+start_screen = True
 
 platforms = [
     pygame.Rect(0, 1560 + PLATFORM_OFFSET_Y, 4000, 20),
@@ -93,11 +97,19 @@ paused = False
 pause_options = ["Continue", "Restart Level", "Main Menu"]
 pause_choice = 1
 
+# === NEW: Death menu variables ===
+death_options = ["Restart Level", "Return to Main Menu"]
+death_choice = 1
+
 show_mask_msg = False
 mask_msg_timer = 180
 
+# === NEW: Win fade-in variables ===
+win_fade_active = False
+win_fade_alpha = 0
+
 def reset_game():
-    global player, velocity_y, oxygen, game_over, game_win, lasers, mask_gotten, show_mask_msg, mask_msg_timer, meteors, meteor_active
+    global player, velocity_y, oxygen, game_over, game_win, lasers, mask_gotten, show_mask_msg, mask_msg_timer, meteors, meteor_active, death_cause
     player.x, player.y = 100, 1510 + PLATFORM_OFFSET_Y
     satellite.y = 770 + PLATFORM_OFFSET_Y
     velocity_y = 0
@@ -112,6 +124,7 @@ def reset_game():
     lasers.clear()
     meteors.clear()
     meteor_active = False
+    death_cause = ""  # === NEW ===
 
 def spawn_laser():
     lasers.append(pygame.Rect(satellite.x, satellite.y + 20, 20, 20))
@@ -126,7 +139,99 @@ glow_positions = [(1750, 560), (1470,400), (1125, 240), (1525, 140), (2225, 240)
 (2835, 330), (2855, 330), (2875, 330), (2895, 330), (2915, 330), (2935, 330), (2955, 330), (2975, 330), 
 (2995, 330), (3015, 330), (3035, 330), (3055, 330), (3075, 330), (3095, 330), (3115, 330), (3135, 330)]
 
+# === NEW: Death cause logic ===
+def get_death_cause():
+    global death_cause
+    # Collisions with lasers
+    for laser in lasers:
+        if player.colliderect(laser):
+            death_cause = "Laser"
+            return
+    # Meteor
+    for meteor in meteors:
+        if player.colliderect(meteor):
+            death_cause = "Meteor"
+            return
+    # Out of oxygen
+    if oxygen <= 0:
+        death_cause = "Ran Out of Oxygen"
+        return
+    # Fell off map
+    if player.y > 1700 + PLATFORM_OFFSET_Y:
+        death_cause = "Fell Off the Map"
+        return
+    # Meteor rain section (lose by falling)
+    if meteor_active and player.y > 330 + PLATFORM_OFFSET_Y:
+        death_cause = "Fell During Meteor Rain"
+        return
+    # Default
+    death_cause = "Unknown"
+
 while True:
+    
+    # === START SCREEN HANDLER ===
+    if start_screen:
+        # --- DRAW FULL SCENE AS NORMAL ---
+        if mask_gotten:
+            screen.fill((50, 50, 50))
+        else:
+            screen.blit(bg_img, (-camera_x * 0.2, HEIGHT - bg_img.get_height()))
+
+        for plat in platforms:
+            pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y - camera_y, plat.width, plat.height))
+
+        screen.blit(mask_img, (mask.x - camera_x, mask.y - camera_y))
+        screen.blit(satellite_img, (satellite.x - camera_x, satellite.y - camera_y))
+
+        for l in lasers:
+            screen.blit(laser_img, (l.x - camera_x, l.y - camera_y))
+        for m in meteors:
+            screen.blit(meteor_img, (m.x - camera_x, m.y - camera_y))
+
+        if mask_gotten:
+            for gx, gy in glow_positions:
+                pygame.draw.circle(screen, (100, 255, 255), (gx - camera_x, gy + PLATFORM_OFFSET_Y - camera_y), 8)
+
+        is_jumping = velocity_y < -1
+        is_falling = velocity_y > 1
+        if is_falling or is_jumping:
+            current_img = player_jump
+        elif 'dx' in locals() and dx != 0:
+            walk_timer += 1
+            if walk_timer >= 10:
+                walk_timer = 0
+                walk_index = (walk_index + 1) % len(walk_images)
+            current_img = walk_images[walk_index]
+        else:
+            current_img = player_stand
+
+        if not facing_right:
+            current_img = pygame.transform.flip(current_img, True, False)
+
+        screen.blit(current_img, (player.x - camera_x, player.y - camera_y))
+
+        pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
+        pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
+        screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
+
+        # --- FLICKER TEXT ---
+        if (pygame.time.get_ticks() // 500) % 2 == 0:
+            start_text = font.render("Press any key to start", True, (255,255,255))
+            rect = start_text.get_rect(center=(WIDTH//2, HEIGHT//2))
+            screen.blit(start_text, rect)
+
+        pygame.display.flip()
+        # Listen for any KEYDOWN event to start the game
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                start_screen = False
+            elif event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        clock.tick(60)
+        continue  # Go to next frame until a key is pressed
+
+
     if mask_gotten:
         screen.fill((50, 50, 50))
         satellite.y = -999
@@ -137,6 +242,25 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        # === NEW: Handle death menu navigation ===
+        if game_over:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    death_choice -= 1
+                    if death_choice < 1:
+                        death_choice = len(death_options)
+                elif event.key == pygame.K_DOWN:
+                    death_choice += 1
+                    if death_choice > len(death_options):
+                        death_choice = 1
+                elif event.key == pygame.K_RETURN:
+                    if death_choice == 1:
+                        reset_game()
+                    elif death_choice == 2:
+                        import main
+                        main.main()
+            continue  # Skip rest when dead
+
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 paused = not paused
@@ -158,7 +282,6 @@ while True:
                     elif pause_choice == 3:
                         import main
                         main.main()
-
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_r]:
@@ -205,9 +328,10 @@ while True:
             show_mask_msg = True
             mask_msg_timer = 180
 
+        oxygen -= OXYGEN_DECREASE
         if oxygen <= 0:
             game_over = True
-        oxygen -= OXYGEN_DECREASE
+            get_death_cause()
 
         camera_x = max(0, player.x - WIDTH // 2)
         min_camera_y = 1560 + PLATFORM_OFFSET_Y - HEIGHT
@@ -217,7 +341,6 @@ while True:
         lowest_allowed_y = first_platform_y - HEIGHT  # Bottom limit (don't see below 1st platform)
         camera_y = min(target_camera_y, lowest_allowed_y)
 
-
         spawn_timer += 1
         if spawn_timer > 110:
             spawn_laser()
@@ -225,11 +348,13 @@ while True:
 
         if player.y > 1700 + PLATFORM_OFFSET_Y:
             game_over = True
+            get_death_cause()
 
         for laser in lasers[:]:
             laser.x -= 4
             if laser.colliderect(player):
                 game_over = True
+                get_death_cause()
             if laser.right < 0:
                 lasers.remove(laser)
 
@@ -239,6 +364,7 @@ while True:
             meteor_timer += 1
             if player.y > 330 + PLATFORM_OFFSET_Y:
                 game_over = True
+                get_death_cause()
             if meteor_timer > 15:
                 spawn_meteor()
                 meteor_timer = 0
@@ -247,10 +373,14 @@ while True:
                 meteor.y += 6
                 if meteor.colliderect(player):
                     game_over = True
+                    get_death_cause()
                 if meteor.top > player.y + HEIGHT:
                     meteors.remove(meteor)
             if oxygen < 5:
+                # === WIN! Trigger fade-in to next level ===
                 game_win = True
+                win_fade_active = True
+                win_fade_alpha = 0
 
     for plat in platforms:
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y - camera_y, plat.width, plat.height))
@@ -296,13 +426,47 @@ while True:
         msg2 = font.render("Follow the glowy things!", True, (0, 255, 200))
         screen.blit(msg2, (WIDTH // 2 - 180, 140))
         mask_msg_timer -= 1
+        
 
+    # === NEW: Death screen and overlay menu ===
     if game_over:
-        msg = font.render("Game Over!", True, (255, 0, 0))
-        screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
-    elif game_win:
-        msg = font.render("YOU GOT SAVED ON TIME THANK GOD! YOU WON!!!", True, (0, 255, 0))
-        screen.blit(msg, (WIDTH // 2 - 300, HEIGHT // 2))
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+
+        death_title = font.render("YOU DIED", True, (255, 0, 0))
+        cause_text = pygame.font.SysFont("arial", int(font_size * 0.7)).render(f"Cause: {death_cause}", True, (255, 255, 255))
+        screen.blit(death_title, death_title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 120)))
+        screen.blit(cause_text, cause_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 60)))
+
+        menu_font = pygame.font.SysFont("arial", font_size, bold=True)
+        for i, opt in enumerate(death_options):
+            y = HEIGHT // 2 + i * 80
+            txt = menu_font.render(opt, True, (255, 255, 255))
+            rect = txt.get_rect(center=(WIDTH // 2, y))
+            if death_choice == i + 1:
+                pygame.draw.rect(screen, (200, 0, 0), rect.inflate(40, 20), border_radius=12)
+            screen.blit(txt, rect)
+
+    # === NEW: Win fade overlay ===
+    elif win_fade_active:
+        win_msg = font.render("YOU GOT SAVED ON TIME! YOU WON!!!", True, (0, 255, 0))
+        rect = win_msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(win_msg, rect)
+
+        win_fade_alpha = min(max(int(win_fade_alpha), 0), 255)
+        fade_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        fade_surface.fill((0, 0, 0, win_fade_alpha))
+        screen.blit(fade_surface, (0, 0))
+
+        if win_fade_alpha < 255:
+            win_fade_alpha += 8
+        else:
+            # If you want to continue to next level, do it here!
+            import main
+            main.main()
+            break
+
     if paused:
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))
@@ -320,7 +484,6 @@ while True:
             rect = txt.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 110 + i * 30))
             screen.blit(txt, rect)
 
-
         pause_font = pygame.font.SysFont("arial", font_size, bold=True)
         for i, opt in enumerate(pause_options):
             y = HEIGHT // 2 + i * 70
@@ -331,5 +494,6 @@ while True:
                 pulse = int(100 + 80 * math.sin(pygame.time.get_ticks() * 0.005))
                 pygame.draw.rect(screen, (pulse, pulse, pulse), rect.inflate(40, 20), border_radius=12)
             screen.blit(surf, rect)
+
     pygame.display.flip()
     clock.tick(60)
