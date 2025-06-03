@@ -17,16 +17,10 @@ bg_img = pygame.image.load("assets/earth_background.png").convert()
 bg_img = pygame.transform.scale(bg_img, (WIDTH + PLATFORM_OFFSET_Y, HEIGHT))
 BG_WIDTH = WIDTH + PLATFORM_OFFSET_Y
 
-alien_img = pygame.image.load("assets/alien.png").convert_alpha()
-alien_img = pygame.transform.scale(alien_img, (60, 60))
+zombie_img = pygame.image.load("assets/zombie1.png").convert_alpha()
+zombie_img = pygame.transform.scale(zombie_img, (60, 60))
 rocket_img = pygame.image.load("assets/rocket2.png")
-rocket_img = pygame.transform.scale(rocket_img, (60, 80))
-volcano_img = pygame.image.load("assets/volcano.png")
-volcano_img = pygame.transform.scale(volcano_img, (80, 60))
-fireball_img = pygame.image.load("assets/fireball.png")
-fireball_img = pygame.transform.scale(fireball_img, (20, 20))
-alien2_image = pygame.image.load("assets/alien2.png").convert_alpha()
-alien2_image = pygame.transform.scale(alien2_image, (65, 70))
+rocket_img = pygame.transform.scale(rocket_img, (60, 70))
 player_stand = pygame.image.load("assets/player_stand.png").convert_alpha()
 player_walk_1 = pygame.image.load("assets/player_walk_1.png").convert_alpha()
 player_walk_2 = pygame.image.load("assets/player_walk_2.png").convert_alpha()
@@ -39,8 +33,8 @@ player_jump = pygame.transform.scale(player_jump, (40, 50))
 walk_images = [player_walk_1, player_walk_2]
 
 PLAYER_SPEED = 5
-GRAVITY = 0.3
-JUMP_STRENGTH = -9
+GRAVITY = 0.5
+JUMP_STRENGTH = -10
 OXYGEN_DECREASE = 0.1
 
 player = pygame.Rect(100, 500 + PLATFORM_OFFSET_Y, 40, 50)
@@ -79,7 +73,17 @@ death_choice = 1
 
 platforms = [
     pygame.Rect(0, 580 + PLATFORM_OFFSET_Y, 4000, 20),
-    pygame.Rect(200, 450 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, 480 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, 380 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, 280 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, 180 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, 80 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, -20 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, -120 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, -220 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, -320 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, -420 + PLATFORM_OFFSET_Y, 150, 20),
+    pygame.Rect(200, -520 + PLATFORM_OFFSET_Y, 150, 20),
     pygame.Rect(500, 400 + PLATFORM_OFFSET_Y, 300, 20),
     pygame.Rect(900, 350 + PLATFORM_OFFSET_Y, 150, 20),
     pygame.Rect(1200, 300 + PLATFORM_OFFSET_Y, 150, 20),
@@ -99,38 +103,9 @@ messages = [
 ]
 
 
-spikes = [
-    [(2000, 300 + PLATFORM_OFFSET_Y), (2020, 260 + PLATFORM_OFFSET_Y), (2040, 300 + PLATFORM_OFFSET_Y)],
-    [(2040, 300 + PLATFORM_OFFSET_Y), (2060, 260 + PLATFORM_OFFSET_Y), (2080, 300 + PLATFORM_OFFSET_Y)],
-    [(2080, 300 + PLATFORM_OFFSET_Y), (2100, 260 + PLATFORM_OFFSET_Y), (2120, 300 + PLATFORM_OFFSET_Y)],
-    [(2800, 250 + PLATFORM_OFFSET_Y), (2820, 210 + PLATFORM_OFFSET_Y), (2840, 250 + PLATFORM_OFFSET_Y)],
-    [(2840, 250 + PLATFORM_OFFSET_Y), (2860, 210 + PLATFORM_OFFSET_Y), (2880, 250 + PLATFORM_OFFSET_Y)],
-    [(2880, 250 + PLATFORM_OFFSET_Y), (2900, 210 + PLATFORM_OFFSET_Y), (2920, 250 + PLATFORM_OFFSET_Y)],
-    [(3020, 250 + PLATFORM_OFFSET_Y), (3040, 210 + PLATFORM_OFFSET_Y), (3060, 250 + PLATFORM_OFFSET_Y)],
-]
-spike_rects = [
-    pygame.Rect(2000, 260 + PLATFORM_OFFSET_Y, 120, 40),
-    pygame.Rect(2800, 210 + PLATFORM_OFFSET_Y, 120, 40),
-    pygame.Rect(3020, 210 + PLATFORM_OFFSET_Y, 40, 40),
-]
-
-falling_spikes = [
-    {"points": [(2400, 40 + PLATFORM_OFFSET_Y), (2420, 80 + PLATFORM_OFFSET_Y), (2440, 40 + PLATFORM_OFFSET_Y)], "trigger_x": 2400, "falling": False, "dy": 0},
-    {"points": [(2440, 40 + PLATFORM_OFFSET_Y), (2460, 80 + PLATFORM_OFFSET_Y), (2480, 40 + PLATFORM_OFFSET_Y)], "trigger_x": 2440, "falling": False, "dy": 0},
-    {"points": [(2480, 40 + PLATFORM_OFFSET_Y), (2500, 80 + PLATFORM_OFFSET_Y), (2520, 40 + PLATFORM_OFFSET_Y)], "trigger_x": 2480, "falling": False, "dy": 0},
-]
-
-spike_color = (125, 106, 74)
-
 rocket = pygame.Rect(3650, 270 + PLATFORM_OFFSET_Y, 60, 50)
-alien = pygame.Rect(300, 390 + PLATFORM_OFFSET_Y, 60, 60)
-alien2 = pygame.Rect(1600, 180 + PLATFORM_OFFSET_Y, 65, 70)
-alien2_direction = 1
-alien3 = pygame.Rect(3550, 290 + PLATFORM_OFFSET_Y, 60, 60)
-alien3_direction = 1
+zombie = pygame.Rect(300, 390 + PLATFORM_OFFSET_Y, 60, 60)
 ok = 0
-volcano = pygame.Rect(1250, 240 + PLATFORM_OFFSET_Y, 80, 60)
-fireballs = []
 
 camera_x = 0
 
@@ -145,39 +120,14 @@ ground_right = platforms[0].right
 def game_over_cause():
     global death_cause
 
-    # 1) Check stationary spikes:
-    for rect in spike_rects:
-        if player.colliderect(rect):
-            death_cause = "Spikes"
-            return
-
-    # 2) Check any currently-falling spike polygons:
-    for spike in falling_spikes:
-        # Reconstruct its bounding Rect from spike["points"]:
-        spike_rect = pygame.Rect(
-            min(p[0] for p in spike["points"]),
-            min(p[1] for p in spike["points"]),
-            max(p[0] for p in spike["points"]) - min(p[0] for p in spike["points"]),
-            max(p[1] for p in spike["points"]) - min(p[1] for p in spike["points"])
-        )
-        if player.colliderect(spike_rect):
-            death_cause = "Falling Spike"
-            return
-
     # 3) Ran out of oxygen?
     if oxygen <= 0:
         death_cause = "Ran Out of Oxygen"
         return
 
     # 4) Alien collisions:
-    if player.colliderect(alien):
+    if player.colliderect(zombie):
         death_cause = "Alien 1"
-        return
-    if player.colliderect(alien2):
-        death_cause = "Alien 2"
-        return
-    if player.colliderect(alien3):
-        death_cause = "Alien 3"
         return
 
     # 5) Fell off bottom of the map:
@@ -185,38 +135,19 @@ def game_over_cause():
         death_cause = "Fell Off the Map"
         return
 
-    # 6) Fireball collisions:
-    for fb in fireballs:
-        if fb.colliderect(player):
-            death_cause = "Fireball"
-            return
 
     # (If nothing else matched, you could set a default cause here.)
     death_cause = "Unknown"
 
 
 def reset_game():
-    global player, velocity_y, oxygen, game_over, game_win, fireballs, ok
+    global player, velocity_y, oxygen, game_over, game_win
     player.x, player.y = 100, 500 + PLATFORM_OFFSET_Y
     velocity_y = 0
     oxygen = 100
     game_over = False
     game_win = False
-    fireballs.clear()
     
-    
-
-    for spike in falling_spikes:
-        spike["falling"] = False
-        spike["dy"] = 0
-    falling_spikes[0]["points"] = [(2400, 40 + PLATFORM_OFFSET_Y), (2420, 80 + PLATFORM_OFFSET_Y), (2440, 40 + PLATFORM_OFFSET_Y)]
-    falling_spikes[1]["points"] = [(2440, 40 + PLATFORM_OFFSET_Y), (2460, 80 + PLATFORM_OFFSET_Y), (2480, 40 + PLATFORM_OFFSET_Y)]
-    falling_spikes[2]["points"] = [(2480, 40 + PLATFORM_OFFSET_Y), (2500, 80 + PLATFORM_OFFSET_Y), (2520, 40 + PLATFORM_OFFSET_Y)]
-    alien3.x, alien3.y = 3550, 290 + PLATFORM_OFFSET_Y
-    ok = 0
-
-def spawn_fireball():
-    fireballs.append(pygame.Rect(volcano.x, volcano.y + 20, 20, 20))
 
 def render_and_fade(screen, text, color, font, skip_text, skip_rect, start_time):
     bg = pygame.Surface((WIDTH, HEIGHT))
@@ -414,23 +345,6 @@ while True:
                     velocity_y      = 0
                     on_ground       = True
 
-        # 6) Trigger falling spikes and check for collisions:
-        for spike in falling_spikes:
-            if not spike["falling"] and player.x >= spike["trigger_x"] - 40:
-                spike["falling"] = True
-            if spike["falling"]:
-                spike["dy"] += 1.5
-                spike["points"] = [(x, y + spike["dy"]) for (x, y) in spike["points"]]
-                spike_rect = pygame.Rect(
-                    min(p[0] for p in spike["points"]),
-                    min(p[1] for p in spike["points"]),
-                    max(p[0] for p in spike["points"]) - min(p[0] for p in spike["points"]),
-                    max(p[1] for p in spike["points"]) - min(p[1] for p in spike["points"])
-                )
-                if player.colliderect(spike_rect):
-                    game_over = True
-                    game_over_cause()
-
         # 7) Decrease oxygen each frame:
         oxygen -= OXYGEN_DECREASE
         if oxygen <= 0:
@@ -438,7 +352,7 @@ while True:
             game_over_cause()
 
         # 8) Check alien collisions:
-        if player.colliderect(alien) or player.colliderect(alien2) or player.colliderect(alien3):
+        if player.colliderect(zombie):
             game_over = True
             game_over_cause()
 
@@ -468,38 +382,6 @@ while True:
         if player.x + player.width > ground_right:
             player.x = ground_right - player.width
 
-
-
-
-        # 12) Alien #2 patrol logic:
-        alien2.x += alien2_direction * 2
-        if alien2.x < 1500 or alien2.x > 1750:
-            alien2_direction *= -1
-
-        # 13) Alien #3 activation:
-        if (player.x >= 3150 and player.y >= 300 + PLATFORM_OFFSET_Y) or ok == 1:
-            ok = 1
-            if alien3.x <= 3200:
-                ok = 2
-            elif (alien3.x <= 3550 or alien3.x >= 3200) and ok == 1:
-                alien3.x += alien3_direction * 10
-                if alien3.x < 3200 or alien3.x > 3550:
-                    alien3_direction *= -1
-
-        # 14) Volcano spawns fireballs periodically:
-        spawn_timer += 1
-        if spawn_timer > 120:
-            spawn_fireball()
-            spawn_timer = 0
-
-        for fireball in fireballs[:]:
-            fireball.x -= 4
-            if fireball.colliderect(player):
-                game_over = True
-                game_over_cause()
-            if fireball.right < 0:
-                fireballs.remove(fireball)
-
     # ─── HANDLE INPUT / MOTION WHEN game_over IS TRUE ─────────────────────────────────
     elif game_over:
         for event in pygame.event.get():
@@ -524,22 +406,8 @@ while True:
     
     for plat in platforms:
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y, plat.width, plat.height))
-    for spike in spikes:
-        pygame.draw.polygon(screen, spike_color, [(x - camera_x, y) for (x, y) in spike])
-    for spike in falling_spikes:
-        pygame.draw.polygon(screen, spike_color, [(x - camera_x, y) for (x, y) in spike["points"]])
-
-    screen.blit(alien_img, (alien.x - camera_x, alien.y))
-    if ok >= 1:
-        screen.blit(alien2_image, (alien3.x - camera_x, alien3.y - 10))
-    else:
-        screen.blit(alien_img, (alien3.x - camera_x, alien3.y))
-    screen.blit(alien2_image, (alien2.x - camera_x, alien2.y))
+    screen.blit(zombie_img, (zombie.x - camera_x, zombie.y))
     screen.blit(rocket_img, (rocket.x - camera_x, rocket.y))
-    screen.blit(volcano_img, (volcano.x - camera_x, volcano.y))
-    for fb in fireballs:
-        screen.blit(fireball_img, (fb.x - camera_x, fb.y))
-
     # ─── PLAYER ANIMATION & DRAW ────────────────────────────────────────────────────
     is_jumping = velocity_y < -1
     is_falling = velocity_y > 1
