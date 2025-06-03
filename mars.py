@@ -14,6 +14,7 @@ PLATFORM_OFFSET_Y = HEIGHT - 600
 
 bg_img = pygame.image.load("assets/background.png").convert()
 bg_img = pygame.transform.scale(bg_img, (WIDTH + PLATFORM_OFFSET_Y, HEIGHT))
+BG_WIDTH = WIDTH + PLATFORM_OFFSET_Y
 
 alien_img = pygame.image.load("assets/alien.png").convert_alpha()
 alien_img = pygame.transform.scale(alien_img, (60, 60))
@@ -53,6 +54,14 @@ jump_sound.set_volume(0.05)
 walk_index = 0
 walk_timer = 0
 facing_right = True
+
+start_screen = True
+countdown_active = False
+countdown_value = 3
+countdown_last_tick = 0  # for timing
+
+win_fade_active = False
+win_fade_alpha = 0
 
 paused = False
 pause_options = ["Continue", "Restart Level", "Main Menu"]
@@ -110,6 +119,14 @@ volcano = pygame.Rect(1250, 240 + PLATFORM_OFFSET_Y, 80, 60)
 fireballs = []
 
 camera_x = 0
+
+# Level ends at the farthest platform or rocket edge
+last_platform_right = max(p.right for p in platforms)
+level_end_x = max(last_platform_right, rocket.right)
+max_camera_x_level = level_end_x - WIDTH
+max_camera_x_bg = int((BG_WIDTH - WIDTH) / 0.2)
+final_max_camera_x = min(max_camera_x_level, max_camera_x_bg)
+ground_right = platforms[0].right  
 
 def game_over_cause():
     global death_cause
@@ -172,6 +189,9 @@ def reset_game():
     game_over = False
     game_win = False
     fireballs.clear()
+    
+    
+
     for spike in falling_spikes:
         spike["falling"] = False
         spike["dy"] = 0
@@ -190,12 +210,30 @@ spawn_timer = 0
 
 while True:
     screen.blit(bg_img, (-camera_x * 0.2, 0))
+    parallax_x = -camera_x * 0.2
+    bg_right_on_screen = parallax_x + bg_img.get_width()
+    if bg_right_on_screen < WIDTH:
+        parallax_x = WIDTH - bg_img.get_width()
+    screen.blit(bg_img, (parallax_x, 0))
+
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
         
+        if start_screen:
+            if event.type == pygame.KEYDOWN:
+                start_screen = False
+                countdown_active = True
+                countdown_value = 3
+                countdown_last_tick = pygame.time.get_ticks()
+            continue
+
+        if countdown_active:
+            # Ignore inputs during countdown
+            continue
+
         if game_over:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
@@ -233,17 +271,31 @@ while True:
                     elif pause_choice == 3:
                         import main
                         main.main()
-            continue  # Ignore other keys while paused
+            continue
 
-        # Only allow ESC to pause when not paused, not dead, not won
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             paused = not paused
 
+        if not paused and not game_win and not game_over:
+            if event.type == pygame.KEYDOWN:
+                if (event.key == pygame.K_SPACE or event.key == pygame.K_w or event.key == pygame.K_UP) and on_ground:
+                    velocity_y = JUMP_STRENGTH
+                    on_ground = False
+                    jump_sound.play()
+
+
+    if countdown_active:
+        now = pygame.time.get_ticks()
+        if now - countdown_last_tick >= 1000:  # 1 second passed
+            countdown_value -= 1
+            countdown_last_tick = now
+            if countdown_value <= 0:
+                countdown_active = False  # Start the game!
 
     keys = pygame.key.get_pressed()
 
     # ─── Normal gameplay: movement, physics, oxygen, collisions, camera, enemy AI ───
-    if not paused and not game_over and not game_win:
+    if not paused and not game_over and not game_win and not start_screen and not countdown_active:
         # 1) Figure out horizontal input:
         dx = 0
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -307,6 +359,8 @@ while True:
         # 9) Check rocket win:
         if player.colliderect(rocket):
             game_win = True
+            win_fade_active = True
+            win_fade_alpha = 0
 
         # 10) If the player falls off the bottom of the screen:
         if player.y > HEIGHT:
@@ -316,8 +370,20 @@ while True:
         # 11) Move camera so player stays near center:
         if player.x > WIDTH // 2:
             camera_x = player.x - WIDTH // 2
+            max_camera_x = ground_right - WIDTH
+            if camera_x > max_camera_x:
+                camera_x = max_camera_x
         else:
             camera_x = 0
+            
+        # Clamp player to never leave level bounds
+        if player.x < 0:
+            player.x = 0
+        if player.x + player.width > ground_right:
+            player.x = ground_right - player.width
+
+
+
 
         # 12) Alien #2 patrol logic:
         alien2.x += alien2_direction * 2
@@ -350,7 +416,6 @@ while True:
 
     # ─── HANDLE INPUT / MOTION WHEN game_over IS TRUE ─────────────────────────────────
     elif game_over:
-        # Only handle up/down/enter to navigate death menu here; do not re‐run physics!
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
@@ -370,7 +435,7 @@ while True:
 
 
     # ─── DRAW EVERYTHING ───────────────────────────────────────────────────────────────
-    # (Platforms, spikes, aliens, rocket, etc. all go here, exactly as before)
+    
     for plat in platforms:
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y, plat.width, plat.height))
     for spike in spikes:
@@ -412,6 +477,44 @@ while True:
     pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
     pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
     screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
+    
+    # Start Screen
+    if start_screen:
+        # Flicker "Press any key" every 500ms
+        if (pygame.time.get_ticks() // 500) % 2 == 0:
+            start_text = font.render("Press any key to start", True, (255, 255, 255))
+            rect = start_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(start_text, rect)
+        pygame.display.flip()
+        clock.tick(60)
+        continue  # skip rest of loop until started
+
+    if countdown_active:
+        if countdown_value > 0:
+            countdown_str = str(countdown_value)
+        else:
+            countdown_str = "GO!"
+
+        # Render text in black (for the outline)
+        countdown_font = pygame.font.SysFont("arial", int(font_size * 2), bold=True)
+        text_black = countdown_font.render(countdown_str, True, (0, 0, 0))
+        text_white = countdown_font.render(countdown_str, True, (255, 255, 255))
+
+        rect = text_black.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+
+        # Blit black outline in 8 directions (up, down, left, right, and diagonals)
+        for dx in [-2, 0, 2]:
+            for dy in [-2, 0, 2]:
+                if dx != 0 or dy != 0:
+                    screen.blit(text_black, rect.move(dx, dy))
+
+        # Blit white text in center
+        screen.blit(text_white, rect)
+
+        pygame.display.flip()
+        clock.tick(60)
+        continue  # skip rest of loop during countdown
+
 
     # ─── IF GAME OVER: DRAW DEATH OVERLAY & MENU ─────────────────────────────────────
     if game_over:
@@ -434,11 +537,27 @@ while True:
             screen.blit(txt, rect)
 
     # ─── IF GAME WIN: TRIGGER NEXT LEVEL ────────────────────────────────────────────
-    elif game_win:
-        msg = font.render("YOU WON!!!! Onto the next level", True, (0, 255, 0))
-        import moon
-        moon.main()
-        screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
+    elif win_fade_active:
+        win_msg = font.render("YOU WON! Onto the next level...", True, (0, 255, 0))
+        rect = win_msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(win_msg, rect)
+
+        # Clamp alpha between 0 and 255
+        win_fade_alpha = min(max(int(win_fade_alpha), 0), 255)
+
+        # Create fade overlay with alpha support
+        fade_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        fade_surface.fill((0, 0, 0, win_fade_alpha))
+        screen.blit(fade_surface, (0, 0))
+
+        if win_fade_alpha < 255:
+            win_fade_alpha += 8  # Or your chosen step
+        else:
+            import moon
+            moon.main()
+            break  # or return or sys.exit() as needed
+
+
 
     # ─── IF PAUSED: DRAW PAUSE OVERLAY & MENU ───────────────────────────────────────
     if paused:
