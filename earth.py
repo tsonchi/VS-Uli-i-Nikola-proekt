@@ -35,9 +35,9 @@ walk_images = [player_walk_1, player_walk_2]
 PLAYER_SPEED = 5
 GRAVITY = 0.5
 JUMP_STRENGTH = -10
-OXYGEN_DECREASE = 0.1
+OXYGEN_DECREASE = 0
 
-player = pygame.Rect(100, 500 + PLATFORM_OFFSET_Y, 40, 50)
+player = pygame.Rect(250, -370 + PLATFORM_OFFSET_Y, 40, 50)
 velocity_y = 0
 on_ground = False
 oxygen = 110
@@ -73,28 +73,14 @@ death_choice = 1
 
 platforms = [
     pygame.Rect(0, 580 + PLATFORM_OFFSET_Y, 4000, 20),
-    pygame.Rect(200, 480 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, 380 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, 280 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, 180 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, 80 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, -20 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, -120 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, -220 + PLATFORM_OFFSET_Y, 150, 20),
     pygame.Rect(200, -320 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, -420 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(200, -520 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(500, 400 + PLATFORM_OFFSET_Y, 300, 20),
-    pygame.Rect(900, 350 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(1200, 300 + PLATFORM_OFFSET_Y, 150, 20),
-    pygame.Rect(1500, 250 + PLATFORM_OFFSET_Y, 300, 20),
-    pygame.Rect(1900, 300 + PLATFORM_OFFSET_Y, 300, 20),
-    pygame.Rect(2300, 250 + PLATFORM_OFFSET_Y, 300, 20),
-    pygame.Rect(2300, 20 + PLATFORM_OFFSET_Y, 300, 20),
-    pygame.Rect(2700, 250 + PLATFORM_OFFSET_Y, 400, 20),
-    pygame.Rect(3200, 350 + PLATFORM_OFFSET_Y, 500, 20),
-]
+    pygame.Rect(570, -280 + PLATFORM_OFFSET_Y, 100, 20),
+    pygame.Rect(1570, -280 + PLATFORM_OFFSET_Y, 100, 20),
+    pygame.Rect(1770, -200 + PLATFORM_OFFSET_Y, 100, 20),
 
+
+]
+rectdirection = 1
 messages = [
     ("You have finally reached the Earth.", (255, 255, 255)),      
     ("You were away for over 40 years now.", (17, 35, 128)),     
@@ -142,7 +128,7 @@ def game_over_cause():
 
 def reset_game():
     global player, velocity_y, oxygen, game_over, game_win
-    player.x, player.y = 100, 500 + PLATFORM_OFFSET_Y
+    player.x, player.y = 250, -360 + PLATFORM_OFFSET_Y
     velocity_y = 0
     oxygen = 100
     game_over = False
@@ -406,6 +392,10 @@ while True:
     
     for plat in platforms:
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y, plat.width, plat.height))
+        if plat.x > 460 and plat.x < 1500:
+            plat.x += rectdirection * 3
+            if plat.x < 470 or plat.x > 1400:
+                rectdirection *= -1
     screen.blit(zombie_img, (zombie.x - camera_x, zombie.y))
     screen.blit(rocket_img, (rocket.x - camera_x, rocket.y))
     # ─── PLAYER ANIMATION & DRAW ────────────────────────────────────────────────────
