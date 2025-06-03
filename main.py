@@ -84,6 +84,58 @@ player_img = pygame.transform.scale(player_img, (20, 20))
 player_rect = player_img.get_rect()
 player_rect.center = (WIDTH * 0.95, HEIGHT * 0.95)
 
+fade_surface = pygame.Surface((WIDTH, HEIGHT))
+fade_surface.fill((0, 0, 0))
+fade_alpha = 255
+fade_speed = 4
+
+def fade_out(screen, clock, fade_speed):
+    fade_surface = pygame.Surface((WIDTH, HEIGHT))
+    fade_surface.fill((0, 0, 0))
+    alpha = 0
+
+    while alpha < 255:
+        screen.fill((10, 10, 30))
+
+        # Redraw all game elements (background, stars, etc.)
+        for star in stars:
+            pygame.draw.circle(screen, (255, 255, 255), star, 1)
+        screen.blit(alien_img, alien_rect)
+        screen.blit(satellite_img, satellite_rect)
+        screen.blit(alien2_img, alien2_rect)
+        screen.blit(jump_img, jump_rect)
+        screen.blit(meteor_img, meteor_rect)
+        screen.blit(player_img, player_rect)
+
+        # Redraw the menu text
+        for i, line in enumerate(title_lines):
+            text = font.render(line, True, (255, 255, 255))
+            shadow = font.render(line, True, (0, 0, 0))
+            text_rect = text.get_rect(center=(WIDTH // 2, title_y + i * (font_size + 10)))
+            screen.blit(shadow, text_rect.move(2, 2))
+            screen.blit(text, text_rect)
+
+        for i, (text, color) in enumerate(options):
+            y = option_start_y + i * option_spacing
+            text_surface = font.render(text, True, color)
+            text_rect = text_surface.get_rect(center=(WIDTH // 2, y))
+
+            if choice == i + 1:
+                rect_x = (WIDTH - rect_width) // 2
+                rect_y = y - rect_height // 2
+                highlight_rect = pygame.Rect(rect_x, rect_y, rect_width, rect_height)
+                pulse = int(60 + 40 * math.sin(pygame.time.get_ticks() * 0.005))
+                color = (pulse, pulse, pulse)
+                pygame.draw.rect(screen, color, highlight_rect, border_radius=14)
+
+            screen.blit(text_surface, text_rect)
+
+        fade_surface.set_alpha(alpha)
+        screen.blit(fade_surface, (0, 0))
+        pygame.display.flip()
+        alpha += fade_speed
+        clock.tick(60)
+
 while True:
     screen.fill((10, 10, 30))
 
@@ -152,6 +204,8 @@ while True:
                     pygame.quit()
                     sys.exit()
 
+                fade_out(screen, clock, fade_speed=4)
+                
                 pygame.quit()
                 run_game(next_game)
                 sys.exit()
@@ -169,6 +223,11 @@ while True:
         current_volume = min(current_volume + fade_in_speed, target_volume)
         if pygame.mixer.get_init():
             pygame.mixer.music.set_volume(current_volume)
+
+    if fade_alpha > 0:
+        fade_surface.set_alpha(fade_alpha)
+        screen.blit(fade_surface, (0, 0))
+        fade_alpha -= fade_speed
 
     pygame.display.flip()
     clock.tick(60)
