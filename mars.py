@@ -30,6 +30,10 @@ player_stand = pygame.image.load("assets/player_stand.png").convert_alpha()
 player_walk_1 = pygame.image.load("assets/player_walk_1.png").convert_alpha()
 player_walk_2 = pygame.image.load("assets/player_walk_2.png").convert_alpha()
 player_jump = pygame.image.load("assets/jump.png").convert_alpha()
+base_img = pygame.image.load("assets/newrocket.png")
+base_img = pygame.transform.scale(base_img, (400, 400))
+meteor1_img = pygame.image.load("assets/meteor.png")
+meteor1_img = pygame.transform.scale(meteor1_img, (40, 80))
 
 player_stand = pygame.transform.scale(player_stand, (40, 50))
 player_walk_1 = pygame.transform.scale(player_walk_1, (40, 50))
@@ -59,6 +63,10 @@ start_screen = True
 countdown_active = False
 countdown_value = 3
 countdown_last_tick = 0  # for timing
+
+player_entered_rocket = False
+rocket_takeoff_y = 0  # Y offset for rocket flight animation
+
 
 win_fade_active = False
 win_fade_alpha = 0
@@ -109,6 +117,7 @@ falling_spikes = [
 spike_color = (125, 106, 74)
 
 rocket = pygame.Rect(3650, 270 + PLATFORM_OFFSET_Y, 60, 50)
+new_rocket = pygame.Rect(-100, 240 + PLATFORM_OFFSET_Y, 100,100)
 alien = pygame.Rect(300, 390 + PLATFORM_OFFSET_Y, 60, 60)
 alien2 = pygame.Rect(1600, 180 + PLATFORM_OFFSET_Y, 65, 70)
 alien2_direction = 1
@@ -117,7 +126,9 @@ alien3_direction = 1
 ok = 0
 volcano = pygame.Rect(1250, 240 + PLATFORM_OFFSET_Y, 80, 60)
 fireballs = []
-
+meteor1 = pygame.Rect(100, 300 + PLATFORM_OFFSET_Y, 100,100)
+meteor2 = pygame.Rect(70, 200 + PLATFORM_OFFSET_Y, 100,100)
+meteor3 = pygame.Rect(82, 420 + PLATFORM_OFFSET_Y, 100,100)
 camera_x = 0
 
 # Level ends at the farthest platform or rocket edge
@@ -189,8 +200,6 @@ def reset_game():
     game_over = False
     game_win = False
     fireballs.clear()
-    
-    
 
     for spike in falling_spikes:
         spike["falling"] = False
@@ -357,10 +366,16 @@ while True:
             game_over_cause()
 
         # 9) Check rocket win:
-        if player.colliderect(rocket):
+        if player.colliderect(rocket) and not player_entered_rocket:
             game_win = True
             win_fade_active = True
             win_fade_alpha = 0
+            player_entered_rocket = True
+            # Move player to align with rocket visually (optional, for effect)
+            player.centerx = rocket.centerx
+            player.bottom = rocket.bottom
+            rocket_takeoff_y = 0
+
 
         # 10) If the player falls off the bottom of the screen:
         if player.y > HEIGHT:
@@ -381,9 +396,6 @@ while True:
             player.x = 0
         if player.x + player.width > ground_right:
             player.x = ground_right - player.width
-
-
-
 
         # 12) Alien #2 patrol logic:
         alien2.x += alien2_direction * 2
@@ -449,11 +461,17 @@ while True:
     else:
         screen.blit(alien_img, (alien3.x - camera_x, alien3.y))
     screen.blit(alien2_image, (alien2.x - camera_x, alien2.y))
-    screen.blit(rocket_img, (rocket.x - camera_x, rocket.y))
+    rocket_draw_y = rocket.y - rocket_takeoff_y
+    screen.blit(rocket_img, (rocket.x - camera_x, rocket_draw_y))
+
     screen.blit(volcano_img, (volcano.x - camera_x, volcano.y))
     for fb in fireballs:
         screen.blit(fireball_img, (fb.x - camera_x, fb.y))
-
+    
+    screen.blit(meteor1_img, (meteor1.x - camera_x, meteor1.y))
+    screen.blit(meteor1_img, (meteor2.x - camera_x, meteor2.y))
+    screen.blit(base_img, (new_rocket.x - camera_x, new_rocket.y))
+    screen.blit(meteor1_img, (meteor3.x - camera_x, meteor3.y))
     # ─── PLAYER ANIMATION & DRAW ────────────────────────────────────────────────────
     is_jumping = velocity_y < -1
     is_falling = velocity_y > 1
@@ -471,7 +489,9 @@ while True:
     if not facing_right:
         current_img = pygame.transform.flip(current_img, True, False)
 
-    screen.blit(current_img, (player.x - camera_x, player.y))
+    if not (win_fade_active and player_entered_rocket):
+        screen.blit(current_img, (player.x - camera_x, player.y))
+
 
     # ─── OXYGEN BAR ─────────────────────────────────────────────────────────────────
     pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
@@ -538,24 +558,30 @@ while True:
 
     # ─── IF GAME WIN: TRIGGER NEXT LEVEL ────────────────────────────────────────────
     elif win_fade_active:
+        # Make rocket fly up
+        if rocket_takeoff_y < HEIGHT:
+            rocket_takeoff_y += 7  # Speed of takeoff
+        # Optionally, move the player with the rocket for realism
+        rocket_draw_y = rocket.y - rocket_takeoff_y
+        if player_entered_rocket:
+            player.y = rocket_draw_y + rocket.height - player.height // 2  # Stay inside rocket
+
         win_msg = font.render("YOU WON! Onto the next level...", True, (0, 255, 0))
         rect = win_msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         screen.blit(win_msg, rect)
 
         # Clamp alpha between 0 and 255
         win_fade_alpha = min(max(int(win_fade_alpha), 0), 255)
-
-        # Create fade overlay with alpha support
         fade_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         fade_surface.fill((0, 0, 0, win_fade_alpha))
         screen.blit(fade_surface, (0, 0))
 
         if win_fade_alpha < 255:
-            win_fade_alpha += 2  # Or your chosen step
+            win_fade_alpha += 2
         else:
             import moon
             moon.main()
-            break  # or return or sys.exit() as needed
+            break
 
 
 
