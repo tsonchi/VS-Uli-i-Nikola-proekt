@@ -45,7 +45,7 @@ OXYGEN_DECREASE = 0.1
 player = pygame.Rect(100, 500 + PLATFORM_OFFSET_Y, 40, 50)
 velocity_y = 0
 on_ground = False
-oxygen = 100
+oxygen = 110
 game_over = False
 death_cause = "" 
 game_win = False
@@ -551,7 +551,7 @@ while True:
         screen.blit(fade_surface, (0, 0))
 
         if win_fade_alpha < 255:
-            win_fade_alpha += 8  # Or your chosen step
+            win_fade_alpha += 2  # Or your chosen step
         else:
             import moon
             moon.main()
