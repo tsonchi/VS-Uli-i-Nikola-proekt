@@ -265,8 +265,8 @@ while True:
                     if death_choice == 1:
                         reset_game()
                     elif death_choice == 2:
-                        import main
-                        main.main()
+                        import menu
+                        menu.main()
             continue  # Important! Skip all other event handling when dead
 
         if paused:
@@ -286,8 +286,8 @@ while True:
                         reset_game()
                         paused = False
                     elif pause_choice == 3:
-                        import main
-                        main.main()
+                        import menu
+                        menu.main()
             continue
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -398,8 +398,8 @@ while True:
                     if death_choice == 1:
                         reset_game()
                     elif death_choice == 2:
-                        import main
-                        main.main()
+                        import menu
+                        menu.main()
 
 
     # ─── DRAW EVERYTHING ───────────────────────────────────────────────────────────────
@@ -508,7 +508,7 @@ while True:
             win_fade_alpha += 2  # Or your chosen step
         else:
             import moon
-            moon.main()
+            moon.menu()
             break  # or return or sys.exit() as needed
 
 

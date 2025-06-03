@@ -362,8 +362,8 @@ while True:
                     if death_choice == 1:
                         reset_game()
                     elif death_choice == 2:
-                        import main
-                        main.main()
+                        import menu
+                        menu.main()
             continue  # Skip rest when dead
 
         elif event.type == pygame.KEYDOWN:
@@ -385,8 +385,8 @@ while True:
                         reset_game()
                         paused = False
                     elif pause_choice == 3:
-                        import main
-                        main.main()
+                        import menu
+                        menu.main()
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_r]:
@@ -569,8 +569,8 @@ while True:
             win_fade_alpha += 8
         else:
             # If you want to continue to next level, do it here!
-            import main
-            main.main()
+            import menu
+            menu.main()
             break
 
     if paused:

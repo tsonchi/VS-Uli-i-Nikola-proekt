@@ -212,11 +212,11 @@ while True:
                 elif choice == 2:
                     pygame.mixer.music.stop()
                     import moon
-                    moon.main()
+                    moon.menu()
                 elif choice == 3:
                     pygame.mixer.music.stop()
                     import earth
-                    earth.main()
+                    earth.menu()
 
             elif event.key == pygame.K_ESCAPE:
                 pygame.quit()
