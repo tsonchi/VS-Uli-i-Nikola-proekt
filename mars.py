@@ -63,6 +63,9 @@ start_screen = True
 countdown_active = False
 countdown_value = 3
 countdown_last_tick = 0  # for timing
+fade_in_active = True
+fade_in_alpha = 255
+
 
 player_entered_rocket = False
 rocket_takeoff_y = 0  # Y offset for rocket flight animation
@@ -230,6 +233,7 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        
         
         if start_screen:
             if event.type == pygame.KEYDOWN:
@@ -498,6 +502,19 @@ while True:
     pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
     screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
     
+    # FADE IN at startup (before countdown and start screen)
+    if fade_in_active:
+        fade_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        fade_surface.fill((0, 0, 0, fade_in_alpha))
+        screen.blit(fade_surface, (0, 0))
+        fade_in_alpha -= 4  # Lower for slower fade, higher for faster
+        if fade_in_alpha <= 0:
+            fade_in_active = False
+            fade_in_alpha = 0
+        pygame.display.flip()
+        clock.tick(60)
+        continue  # Skip the rest until fade-in is done
+
     # Start Screen
     if start_screen:
         # Flicker "Press any key" every 500ms
