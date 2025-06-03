@@ -285,7 +285,8 @@ while True:
 
         screen.blit(mask_img, (mask.x - camera_x, mask.y - camera_y))
         screen.blit(satellite_img, (satellite.x - camera_x, satellite.y - camera_y))
-
+        screen.blit(rocket_img, (rocket_landing_x, rocket_current_y))
+        
         for l in lasers:
             screen.blit(laser_img, (l.x - camera_x, l.y - camera_y))
         for m in meteors:
