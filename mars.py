@@ -6,7 +6,9 @@ WIDTH, HEIGHT = info.current_w, info.current_h
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Mars Escape")
 clock = pygame.time.Clock()
-font = pygame.font.SysFont(None, 36)
+
+font_size = int(HEIGHT * 0.05)
+font = pygame.font.SysFont("arial", font_size, bold=True)
 
 PLATFORM_OFFSET_Y = HEIGHT - 600
 
@@ -289,9 +291,8 @@ while True:
         overlay.fill((0, 0, 0, 180))
         screen.blit(overlay, (0, 0))
 
-        pause_title_font = pygame.font.SysFont("arial", 52, bold=True)
-        pause_help_font = pygame.font.SysFont("arial", 28)
-
+        pause_title_font = pygame.font.SysFont("arial", int(font_size * 1.2), bold=True)
+        pause_help_font = pygame.font.SysFont("arial", int(font_size * 0.6))
         paused_text = pause_title_font.render("PAUSED", True, (255, 255, 255))
         paused_rect = paused_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 160))
         screen.blit(paused_text, paused_rect)
@@ -303,7 +304,7 @@ while True:
             screen.blit(txt, rect)
 
 
-        pause_font = pygame.font.SysFont("arial", 48, bold=True)
+        pause_font = pygame.font.SysFont("arial", font_size, bold=True)
         for i, opt in enumerate(pause_options):
             y = HEIGHT // 2 + i * 70
             color = (255, 255, 255)
