@@ -46,6 +46,7 @@ velocity_y = 0
 on_ground = False
 oxygen = 100
 game_over = False
+death_cause = "" 
 game_win = False
 jump_sound = pygame.mixer.Sound('audio/jump.mp3')
 jump_sound.set_volume(0.05)
@@ -56,6 +57,10 @@ facing_right = True
 paused = False
 pause_options = ["Continue", "Restart Level", "Main Menu"]
 pause_choice = 1
+
+death_options = ["Restart Level", "Return to Main Menu"]
+death_choice = 1
+
 
 platforms = [
     pygame.Rect(0, 580 + PLATFORM_OFFSET_Y, 4000, 20),
@@ -105,6 +110,30 @@ volcano = pygame.Rect(1250, 240 + PLATFORM_OFFSET_Y, 80, 60)
 fireballs = []
 
 camera_x = 0
+
+def game_over_cause():
+    global death_cause
+    if player.colliderect(rect):
+        death_cause = "Spikes"
+
+    if player.colliderect(spike_rect):
+        death_cause = "Falling Spike"
+
+    if oxygen <= 0:
+        death_cause = "Ran Out of Oxygen"
+    elif player.colliderect(alien):
+        death_cause = "Alien 1"
+    elif player.colliderect(alien2):
+        death_cause = "Alien 2"
+    elif player.colliderect(alien3):
+        death_cause = "Alien 3"
+
+    if player.y > HEIGHT:
+        death_cause = "Fell Off the Map"
+
+    if fireball.colliderect(player):
+        death_cause = "Fireball"
+
 
 def reset_game():
     global player, velocity_y, oxygen, game_over, game_win, fireballs, ok
@@ -171,6 +200,22 @@ while True:
             velocity_y = JUMP_STRENGTH
             on_ground = False
             jump_sound.play()
+    elif game_over:
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                death_choice -= 1
+                if death_choice < 1:
+                    death_choice = len(death_options)
+            elif event.key == pygame.K_DOWN:
+                death_choice += 1
+                if death_choice > len(death_options):
+                    death_choice = 1
+            elif event.key == pygame.K_RETURN:
+                if death_choice == 1:
+                    reset_game()
+                elif death_choice == 2:
+                    import main
+                    main.main()
 
         velocity_y += GRAVITY
         player.y += velocity_y
@@ -187,6 +232,7 @@ while True:
         for rect in spike_rects:
             if player.colliderect(rect):
                 game_over = True
+                game_over_cause()
 
         for spike in falling_spikes:
             if not spike["falling"] and player.x >= spike["trigger_x"] - 40:
@@ -202,14 +248,17 @@ while True:
                 )
                 if player.colliderect(spike_rect):
                     game_over = True
+                    game_over_cause()
 
         oxygen -= OXYGEN_DECREASE
         if oxygen <= 0 or player.colliderect(alien) or player.colliderect(alien2) or player.colliderect(alien3):
             game_over = True
+            game_over_cause()
         if player.colliderect(rocket):
             game_win = True
         if player.y > HEIGHT:
             game_over = True
+            game_over_cause()
         if player.x > WIDTH // 2:
             camera_x = player.x - WIDTH // 2
         else:
@@ -236,6 +285,7 @@ while True:
             fireball.x -= 4
             if fireball.colliderect(player):
                 game_over = True
+                game_over_cause()
             if fireball.right < 0:
                 fireballs.remove(fireball)
 
@@ -280,8 +330,24 @@ while True:
     screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
 
     if game_over:
-        msg = font.render("Game Over!", True, (255, 0, 0))
-        screen.blit(msg, (WIDTH // 2 - 100, HEIGHT // 2))
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 200))
+        screen.blit(overlay, (0, 0))
+
+        death_title = font.render("YOU DIED", True, (255, 0, 0))
+        cause_text = pygame.font.SysFont("arial", int(font_size * 0.7)).render(f"Cause: {death_cause}", True, (255, 255, 255))
+        screen.blit(death_title, death_title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 120)))
+        screen.blit(cause_text, cause_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 60)))
+
+        menu_font = pygame.font.SysFont("arial", font_size, bold=True)
+        for i, opt in enumerate(death_options):
+            y = HEIGHT // 2 + i * 80
+            txt = menu_font.render(opt, True, (255, 255, 255))
+            rect = txt.get_rect(center=(WIDTH // 2, y))
+            if death_choice == i + 1:
+                pygame.draw.rect(screen, (200, 0, 0), rect.inflate(40, 20), border_radius=12)
+            screen.blit(txt, rect)
+
     elif game_win:
         msg = font.render("YOU WON!!!! Onto the next level", True, (0, 255, 0))
         import moon
