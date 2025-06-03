@@ -35,6 +35,18 @@ base_img = pygame.transform.scale(base_img, (400, 400))
 meteor1_img = pygame.image.load("assets/meteor.png")
 meteor1_img = pygame.transform.scale(meteor1_img, (40, 80))
 
+MUSIC_FILE = "audio/level1.wav"
+MUSIC_FADE_IN_MS = 2500  # 2.5 seconds fade in
+MUSIC_FADE_OUT_MS = 1200  # 1.2 seconds fade out
+
+try:
+    pygame.mixer.music.load(MUSIC_FILE)
+    pygame.mixer.music.play(-1, fade_ms=MUSIC_FADE_IN_MS)  # Loop forever, fade in
+    pygame.mixer.music.set_volume(0.07)  # or your preferred volume
+except pygame.error:
+    print("Warning: Could not load music!")
+
+
 player_stand = pygame.transform.scale(player_stand, (40, 50))
 player_walk_1 = pygame.transform.scale(player_walk_1, (40, 50))
 player_walk_2 = pygame.transform.scale(player_walk_2, (40, 50))
@@ -260,9 +272,13 @@ while True:
                 elif event.key == pygame.K_RETURN:
                     if death_choice == 1:
                         reset_game()
-                    elif death_choice == 2:
+                    if death_choice == 2:
+                        pygame.mixer.music.fadeout(MUSIC_FADE_OUT_MS)
+                        pygame.time.wait(MUSIC_FADE_OUT_MS + 100)  # Wait for fade out
                         import menu
                         menu.main()
+                        break  # Or sys.exit(), depending on how you structure your file
+
             continue  # Important! Skip all other event handling when dead
 
         if paused:
@@ -281,9 +297,13 @@ while True:
                     elif pause_choice == 2:
                         reset_game()
                         paused = False
-                    elif pause_choice == 3:
+                    elif pause_choice == 2:
+                        pygame.mixer.music.fadeout(MUSIC_FADE_OUT_MS)
+                        pygame.time.wait(MUSIC_FADE_OUT_MS + 100)  # Wait for fade out
                         import menu
                         menu.main()
+                        break  # Or sys.exit(), depending on how you structure your file
+
             continue
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -596,11 +616,12 @@ while True:
         if win_fade_alpha < 255:
             win_fade_alpha += 2
         else:
+            # Fade out music, wait, then move to next level
+            pygame.mixer.music.fadeout(MUSIC_FADE_OUT_MS)
+            pygame.time.wait(MUSIC_FADE_OUT_MS + 100)  # Wait for the fadeout to complete
             import moon
             moon.menu()
             break
-
-
 
     # ─── IF PAUSED: DRAW PAUSE OVERLAY & MENU ───────────────────────────────────────
     if paused:
