@@ -183,8 +183,8 @@ while True:
                         reset_game()
                         paused = False
                     elif pause_choice == 3:
-                        import main
-                        main.main()
+                        import menu
+                        menu.main()
 
     keys = pygame.key.get_pressed()
 
@@ -214,8 +214,8 @@ while True:
                 if death_choice == 1:
                     reset_game()
                 elif death_choice == 2:
-                    import main
-                    main.main()
+                    import menu
+                    menu.main()
 
         velocity_y += GRAVITY
         player.y += velocity_y

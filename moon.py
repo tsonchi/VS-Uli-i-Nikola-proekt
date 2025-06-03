@@ -39,6 +39,9 @@ mask_img = pygame.transform.scale(mask_img, (50, 50))
 meteor_img = pygame.image.load("assets/meteor.png").convert_alpha()
 meteor_img = pygame.transform.scale(meteor_img, (40, 60))
 
+rocket_img= pygame.image.load("assets/rocket1.png").convert_alpha()
+rocket_img = pygame.transform.scale(rocket_img, (60, 80))
+
 PLAYER_SPEED = 5
 GRAVITY = 0.1
 JUMP_STRENGTH = -6
@@ -59,7 +62,11 @@ walk_index = 0
 walk_timer = 0
 facing_right = True
 
+fade_in_active = True
+fade_in_alpha = 255
+
 start_screen = True
+
 
 platforms = [
     pygame.Rect(0, 1560 + PLATFORM_OFFSET_Y, 4000, 20),
@@ -79,6 +86,7 @@ platforms = [
 
 satellite = pygame.Rect(1450, 770 + PLATFORM_OFFSET_Y, 80, 60)
 mask = pygame.Rect(2200, 530 + PLATFORM_OFFSET_Y, 50, 50)
+rocket = pygame.Rect(20, 1480 + PLATFORM_OFFSET_Y, 60, 80)
 mask_gotten = False
 lasers = []
 meteors = []
@@ -167,8 +175,103 @@ def get_death_cause():
     # Default
     death_cause = "Unknown"
 
+landing_anim_active = True
+fade_in_alpha = 255
+rocket_start_y = -200  # Off screen at the top
+rocket_landing_x = rocket.x - camera_x
+rocket_landing_y = rocket.y - camera_y
+rocket_current_y = rocket_start_y
+
+landing_duration = 120  # frames (2 seconds at 60fps)
+landing_frame = 0
+
+# ---- MOON LANDING ANIMATION & FADE-IN ----
+while landing_anim_active:
+    # 1. Draw your scene (background, platforms, other objects)
+    if mask_gotten:
+        screen.fill((50, 50, 50))
+    else:
+        screen.blit(bg_img, (-camera_x * 0.2, HEIGHT - bg_img.get_height()))
+    for plat in platforms:
+        pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y - camera_y, plat.width, plat.height))
+    # (Add any other scenery here, similar to your main loop)
+    screen.blit(mask_img, (mask.x - camera_x, mask.y - camera_y))
+    screen.blit(satellite_img, (satellite.x - camera_x, satellite.y - camera_y))
+    screen.blit(rocket_img, (rocket_landing_x, rocket_current_y))
+    # Draw overlays like oxygen bar, if you want
+    pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
+    pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
+    screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
+
+    # 2. Animate the rocket
+    if landing_frame < landing_duration:
+        t = landing_frame / landing_duration
+        rocket_current_y = rocket_start_y + (rocket_landing_y - rocket_start_y) * t
+    else:
+        rocket_current_y = rocket_landing_y
+
+    # 3. Draw fade-in overlay
+    if fade_in_alpha > 0:
+        fade_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        fade_surface.fill((0, 0, 0, fade_in_alpha))
+        screen.blit(fade_surface, (0, 0))
+        fade_in_alpha -= int(255 / landing_duration)
+        if fade_in_alpha < 0:
+            fade_in_alpha = 0
+
+    pygame.display.flip()
+    clock.tick(60)
+    landing_frame += 1
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+    if landing_frame > landing_duration and fade_in_alpha == 0:
+        landing_anim_active = False
+        start_screen = True  # <-- so main loop shows start screen
+
 while True:
-    
+    if fade_in_active:
+        # --- DRAW FULL SCENE (exactly as you would on the start screen) ---
+        if mask_gotten:
+            screen.fill((50, 50, 50))
+        else:
+            screen.blit(bg_img, (-camera_x * 0.2, HEIGHT - bg_img.get_height()))
+        for plat in platforms:
+            pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y - camera_y, plat.width, plat.height))
+        screen.blit(mask_img, (mask.x - camera_x, mask.y - camera_y))
+        screen.blit(satellite_img, (satellite.x - camera_x, satellite.y - camera_y))
+        for l in lasers:
+            screen.blit(laser_img, (l.x - camera_x, l.y - camera_y))
+        for m in meteors:
+            screen.blit(meteor_img, (m.x - camera_x, m.y - camera_y))
+        if mask_gotten:
+            for gx, gy in glow_positions:
+                pygame.draw.circle(screen, (100, 255, 255), (gx - camera_x, gy + PLATFORM_OFFSET_Y - camera_y), 8)
+        # Draw the player (add your animation selection if you want)
+        screen.blit(player_stand, (player.x - camera_x, player.y - camera_y))
+        pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
+        pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
+        screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
+        screen.blit(rocket_img, (rocket.x - camera_x, rocket.y - camera_y))
+        # --- THEN FADE OVERLAY ---
+        fade_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        fade_surface.fill((0, 0, 0, fade_in_alpha))
+        screen.blit(fade_surface, (0, 0))
+        fade_in_alpha -= 4
+        if fade_in_alpha <= 0:
+            fade_in_alpha = 0
+            fade_in_active = False
+            start_screen = True
+        pygame.display.flip()
+        clock.tick(60)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        continue  # Do not run rest of loop yet
+
     # === START SCREEN HANDLER ===
     if start_screen:
         # --- DRAW FULL SCENE AS NORMAL ---
@@ -182,7 +285,8 @@ while True:
 
         screen.blit(mask_img, (mask.x - camera_x, mask.y - camera_y))
         screen.blit(satellite_img, (satellite.x - camera_x, satellite.y - camera_y))
-
+        screen.blit(rocket_img, (rocket_landing_x, rocket_current_y))
+        
         for l in lasers:
             screen.blit(laser_img, (l.x - camera_x, l.y - camera_y))
         for m in meteors:
@@ -219,15 +323,16 @@ while True:
             start_text = font.render("Press any key to start", True, (255,255,255))
             rect = start_text.get_rect(center=(WIDTH//2, HEIGHT//2))
             screen.blit(start_text, rect)
-
-        pygame.display.flip()
-        # Listen for any KEYDOWN event to start the game
+        
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                start_screen = False
-            elif event.type == pygame.QUIT:
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            if not fade_in_active and event.type == pygame.KEYDOWN:
+                start_screen = False
+
+            
+        pygame.display.flip()
         clock.tick(60)
         continue  # Go to next frame until a key is pressed
 
@@ -257,8 +362,8 @@ while True:
                     if death_choice == 1:
                         reset_game()
                     elif death_choice == 2:
-                        import main
-                        main.main()
+                        import menu
+                        menu.main()
             continue  # Skip rest when dead
 
         elif event.type == pygame.KEYDOWN:
@@ -280,8 +385,8 @@ while True:
                         reset_game()
                         paused = False
                     elif pause_choice == 3:
-                        import main
-                        main.main()
+                        import menu
+                        menu.main()
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_r]:
@@ -387,6 +492,7 @@ while True:
 
     screen.blit(mask_img, (mask.x - camera_x, mask.y - camera_y))
     screen.blit(satellite_img, (satellite.x - camera_x, satellite.y - camera_y))
+    screen.blit(rocket_img, (rocket.x - camera_x, rocket.y - camera_y))
 
     for l in lasers:
         screen.blit(laser_img, (l.x - camera_x, l.y - camera_y))
@@ -463,8 +569,8 @@ while True:
             win_fade_alpha += 8
         else:
             # If you want to continue to next level, do it here!
-            import main
-            main.main()
+            import menu
+            menu.main()
             break
 
     if paused:
@@ -494,6 +600,17 @@ while True:
                 pulse = int(100 + 80 * math.sin(pygame.time.get_ticks() * 0.005))
                 pygame.draw.rect(screen, (pulse, pulse, pulse), rect.inflate(40, 20), border_radius=12)
             screen.blit(surf, rect)
+    
+    # --- FADE-IN: Draw black overlay, fade out on first launch ---
+    if fade_in_active:
+        fade_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        fade_surface.fill((0, 0, 0, fade_in_alpha))
+        screen.blit(fade_surface, (0, 0))
+        fade_in_alpha -= 4  # (or 2 for slower)
+        if fade_in_alpha <= 0:
+            fade_in_alpha = 0
+            fade_in_active = False
+
 
     pygame.display.flip()
     clock.tick(60)

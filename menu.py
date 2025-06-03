@@ -205,10 +205,18 @@ while True:
                     sys.exit()
 
                 fade_out(screen, clock, fade_speed=4)
-                
-                pygame.quit()
-                run_game(next_game)
-                sys.exit()
+                if choice == 1:
+                    pygame.mixer.music.stop()  # Stop any current music
+                    import mars
+                    mars.main()
+                elif choice == 2:
+                    pygame.mixer.music.stop()
+                    import moon
+                    moon.menu()
+                elif choice == 3:
+                    pygame.mixer.music.stop()
+                    import earth
+                    earth.menu()
 
             elif event.key == pygame.K_ESCAPE:
                 pygame.quit()
