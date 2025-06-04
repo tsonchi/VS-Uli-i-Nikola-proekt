@@ -7,6 +7,10 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCA
 pygame.display.set_caption("Mars Escape")
 clock = pygame.time.Clock()
 
+MUSIC_FILE = "audio/level3.wav"
+MUSIC_FADE_IN_MS = 2500  # 2.5 seconds fade in
+MUSIC_FADE_OUT_MS = 1200 
+
 font_size = int(HEIGHT * 0.05)
 font = pygame.font.SysFont("arial", font_size, bold=True)
 main_font = pygame.font.SysFont("arial", 40)
@@ -16,6 +20,7 @@ PLATFORM_OFFSET_Y = HEIGHT - 600
 bg_img = pygame.image.load("assets/earth_background.png").convert()
 bg_img = pygame.transform.scale(bg_img, (WIDTH + PLATFORM_OFFSET_Y, HEIGHT))
 BG_WIDTH = WIDTH + PLATFORM_OFFSET_Y
+bg_glitch_intensity = 0
 
 zombie_img = pygame.image.load("assets/zombie1.png").convert_alpha()
 zombie_img = pygame.transform.scale(zombie_img, (60, 60))
@@ -49,6 +54,11 @@ jump_sound.set_volume(0.05)
 walk_index = 0
 walk_timer = 0
 facing_right = True
+scrambled_controls = False
+loop_active = True
+reverted_keys = False
+zombie_direction = 1
+ok = 0
 
 start_screen = True
 countdown_active = False
@@ -72,15 +82,19 @@ death_choice = 1
 
 
 platforms = [
-    pygame.Rect(0, 580 + PLATFORM_OFFSET_Y, 4000, 20),
+    pygame.Rect(0, 580 + PLATFORM_OFFSET_Y, 8000, 20),  # ground
     pygame.Rect(200, -320 + PLATFORM_OFFSET_Y, 150, 20),
     pygame.Rect(570, -280 + PLATFORM_OFFSET_Y, 100, 20),
     pygame.Rect(1570, -280 + PLATFORM_OFFSET_Y, 100, 20),
-    pygame.Rect(1770, -200 + PLATFORM_OFFSET_Y, 100, 20),
-
-
+    pygame.Rect(1870, -200 + PLATFORM_OFFSET_Y, 100, 20),
+    pygame.Rect(2170, -180 + PLATFORM_OFFSET_Y, 100, 20),
+    pygame.Rect(2170, -300 + PLATFORM_OFFSET_Y, 100, 20), #facing left
+    pygame.Rect(2370, -200 + PLATFORM_OFFSET_Y, 4500, 20),  # loop room
 ]
+loop_zone_x_start = 3770
+loop_zone_x_end = 5870
 rectdirection = 1
+bg_shake = 0
 messages = [
     ("You have finally reached the Earth.", (255, 255, 255)),      
     ("You were away for over 40 years now.", (17, 35, 128)),     
@@ -89,8 +103,8 @@ messages = [
 ]
 
 
-rocket = pygame.Rect(3650, 270 + PLATFORM_OFFSET_Y, 60, 50)
-zombie = pygame.Rect(300, 390 + PLATFORM_OFFSET_Y, 60, 60)
+rocket = pygame.Rect(31900, -300 + PLATFORM_OFFSET_Y, 60, 50)
+zombie = pygame.Rect(33000, 40 + PLATFORM_OFFSET_Y, 60, 60)
 ok = 0
 
 camera_x = 0
@@ -102,10 +116,13 @@ max_camera_x_level = level_end_x - WIDTH
 max_camera_x_bg = int((BG_WIDTH - WIDTH) / 0.2)
 final_max_camera_x = min(max_camera_x_level, max_camera_x_bg)
 ground_right = platforms[0].right  
+show_revert_message = False
+revert_msg_timer = 0
 
 def game_over_cause():
     global death_cause
-
+    if player.y >500:
+        death_cause = "Fell off"
     # 3) Ran out of oxygen?
     if oxygen <= 0:
         death_cause = "Ran Out of Oxygen"
@@ -113,7 +130,7 @@ def game_over_cause():
 
     # 4) Alien collisions:
     if player.colliderect(zombie):
-        death_cause = "Alien 1"
+        death_cause = "Eaten by a Zombie"
         return
 
     # 5) Fell off bottom of the map:
@@ -127,13 +144,26 @@ def game_over_cause():
 
 
 def reset_game():
-    global player, velocity_y, oxygen, game_over, game_win
+    global player, velocity_y, oxygen, game_over, game_win, loop_active, reverted_keys, zombie_direction, zombie, rocket
     player.x, player.y = 250, -360 + PLATFORM_OFFSET_Y
     velocity_y = 0
     oxygen = 100
     game_over = False
     game_win = False
+    platforms[2].x = 1370
+    loop_active = True
+    reverted_keys = False
+    zombie_direction = 1
+    rocket = pygame.Rect(31900, -300 + PLATFORM_OFFSET_Y, 60, 50)
+    zombie = pygame.Rect(33000, 40 + PLATFORM_OFFSET_Y, 60, 60)
+    loop_platform = pygame.Rect(2370, -200 + PLATFORM_OFFSET_Y, 4500, 20)
+    if len(platforms) < 8:
+        platforms.insert(7, loop_platform)
     
+def render_glitched_background():
+    shake_x = random.randint(-bg_glitch_intensity, bg_glitch_intensity)
+    shake_y = random.randint(-bg_glitch_intensity, bg_glitch_intensity)
+    screen.blit(bg_img, (-camera_x * 0.2 + shake_x, 0 + shake_y))
 
 def render_and_fade(screen, text, color, font, skip_text, skip_rect, start_time):
     bg = pygame.Surface((WIDTH, HEIGHT))
@@ -187,6 +217,44 @@ def render_and_fade(screen, text, color, font, skip_text, skip_rect, start_time)
 
     return False
 
+def show_revert_text():
+    global reverted_keys
+
+    screen.fill((0, 0, 0))
+    msg1 = "You escaped the loop!"
+    msg2 = "But you're now dizzy — your movement is different. Be careful!"
+
+    text1 = font.render(msg1, True, (255, 255, 255))
+    text2 = font.render(msg2, True, (255, 80, 80))
+
+    rect1 = text1.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 40))
+    rect2 = text2.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
+
+    # Fade in
+    for alpha in range(0, 256, 10):
+        text1.set_alpha(alpha)
+        text2.set_alpha(alpha)
+        screen.fill((0, 0, 0))
+        screen.blit(text1, rect1)
+        screen.blit(text2, rect2)
+        pygame.display.update()
+        pygame.time.delay(30)
+
+    # Pause
+    pygame.time.delay(2000)
+
+    # Fade out
+    for alpha in range(255, -1, -10):
+        text1.set_alpha(alpha)
+        text2.set_alpha(alpha)
+        screen.fill((0, 0, 0))
+        screen.blit(text1, rect1)
+        screen.blit(text2, rect2)
+        pygame.display.update()
+        pygame.time.delay(30)
+
+    reverted_keys = True
+
 
 def show_intro(screen, messages, font, skip_font):
     screen.fill((0, 0, 0))
@@ -203,6 +271,27 @@ def show_intro(screen, messages, font, skip_font):
         skipped = render_and_fade(screen, text, color, font, skip_text, skip_rect, start_time)
         if skipped:
             break
+changed_plats = []
+def change_map():
+    global loop_active, changed_plats, zombie, rocket
+    if 7 < len(platforms):
+        current_plat = platforms[6]
+        if player.y <= -320 + PLATFORM_OFFSET_Y and player.x >2170 and player.x <=2265:
+            show_revert_text()
+            platforms.pop(7)
+            loop_active = False
+            rocket = pygame.Rect(3190, -350 + PLATFORM_OFFSET_Y, 60, 50)
+            zombie = pygame.Rect(3300, 40 + PLATFORM_OFFSET_Y, 60, 60)
+    changed_plats = [
+    pygame.Rect(2370, -300 + PLATFORM_OFFSET_Y, 100, 20), 
+    pygame.Rect(2570, -200 + PLATFORM_OFFSET_Y, 100, 20),  
+    pygame.Rect(2770, -100 + PLATFORM_OFFSET_Y, 100, 20), 
+    pygame.Rect(2970, 100 + PLATFORM_OFFSET_Y, 400, 20),   
+    pygame.Rect(3170, 0 + PLATFORM_OFFSET_Y, 50, 20),  
+    pygame.Rect(3170, -100 + PLATFORM_OFFSET_Y, 50, 20), 
+    pygame.Rect(3170, -200 + PLATFORM_OFFSET_Y, 50, 20), 
+    pygame.Rect(3170, -300 + PLATFORM_OFFSET_Y, 100, 20),  
+    ]
 
 
 spawn_timer = 0
@@ -211,8 +300,10 @@ pygame.mixer.music.fadeout(2000)  # 2 second fadeout
 
 # … (everything up through event handling stays the same) …
 while True:
-    
-    screen.blit(bg_img, (-camera_x * 0.2, 0))
+    if bg_glitch_intensity > 0:
+        render_glitched_background()
+    else:
+        screen.blit(bg_img, (-camera_x * 0.2, 0))
     parallax_x = -camera_x * 0.2
     bg_right_on_screen = parallax_x + bg_img.get_width()
     if bg_right_on_screen < WIDTH:
@@ -228,7 +319,7 @@ while True:
         if start_screen:
             if event.type == pygame.KEYDOWN:
                 start_screen = False
-                countdown_active = True
+                countdown_active = False
                 countdown_value = 3
                 countdown_last_tick = pygame.time.get_ticks()
             continue
@@ -281,10 +372,16 @@ while True:
 
         if not paused and not game_win and not game_over:
             if event.type == pygame.KEYDOWN:
-                if (event.key == pygame.K_SPACE or event.key == pygame.K_w or event.key == pygame.K_UP) and on_ground:
-                    velocity_y = JUMP_STRENGTH
-                    on_ground = False
-                    jump_sound.play()
+                if reverted_keys == False:
+                    if (event.key == pygame.K_SPACE or event.key == pygame.K_w or event.key == pygame.K_UP) and on_ground:
+                        velocity_y = JUMP_STRENGTH
+                        on_ground = False
+                        jump_sound.play()
+                else:
+                    if (event.key == pygame.K_LEFT or event.key == pygame.K_a) and on_ground:
+                        velocity_y = JUMP_STRENGTH
+                        on_ground = False
+                        jump_sound.play()
 
 
     if countdown_active:
@@ -301,46 +398,96 @@ while True:
     if not paused and not game_over and not game_win and not start_screen and not countdown_active:
         # 1) Figure out horizontal input:
         dx = 0
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            dx = -PLAYER_SPEED
-            facing_right = False
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            dx =  PLAYER_SPEED
-            facing_right = True
+        if reverted_keys == False:
+            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+                dx = -PLAYER_SPEED
+                facing_right = False
+            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+                dx =  PLAYER_SPEED
+                facing_right = True
 
-        # 2) Jump:
-        if (keys[pygame.K_SPACE] or keys[pygame.K_w] or keys[pygame.K_UP]) and on_ground:
-            velocity_y = JUMP_STRENGTH
-            on_ground = False
-            jump_sound.play()
+            # 2) Jump:
+            if (keys[pygame.K_SPACE] or keys[pygame.K_w] or keys[pygame.K_UP]) and on_ground:
+                velocity_y = JUMP_STRENGTH
+                on_ground = False
+                jump_sound.play()
 
-        # 3) Apply gravity to vertical velocity:
-        velocity_y += GRAVITY
-        player.y   += velocity_y
+            # 3) Apply gravity to vertical velocity:
+            velocity_y += GRAVITY
+            player.y   += velocity_y
 
-        # 4) Move horizontally:
-        player.x += dx
+            # 4) Move horizontally:
+            player.x += dx
+        else:
+            if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+                dx = -PLAYER_SPEED
+                facing_right = False
+            if keys[pygame.K_SPACE] or keys[pygame.K_w] or keys[pygame.K_UP]:
+                dx =  PLAYER_SPEED
+                facing_right = True
+
+            # 2) Jump:
+            if (keys[pygame.K_LEFT] or keys[pygame.K_a]) and on_ground:
+                velocity_y = JUMP_STRENGTH
+                on_ground = False
+                jump_sound.play()
+
+            # 3) Apply gravity to vertical velocity:
+            velocity_y += GRAVITY
+            player.y   += velocity_y
+
+            # 4) Move horizontally:
+            player.x += dx
+
 
         # 5) Ground‐check & platform collisions:
         on_ground = False
         for plat in platforms:
             if player.colliderect(plat):
+                if plat == platforms[6] and facing_right == True:
+                    continue
                 # Only land if we were falling onto it:
                 if velocity_y > 0 and player.bottom <= plat.bottom:
-                    player.bottom   = plat.top
-                    velocity_y      = 0
-                    on_ground       = True
+                    player.bottom = plat.top
+                    velocity_y = 0
+                    on_ground = True
+        for plat in changed_plats:
+            if loop_active == False:
+                if player.colliderect(plat):
+                    if velocity_y > 0 and player.bottom <= plat.bottom:
+                        player.bottom = plat.top
+                        velocity_y = 0
+                        on_ground = True
+                    if plat == changed_plats[0]:
+                        reverted_keys = True
+
+
+        
+        
+        change_map()
+        
+        if (player.x>2920 or ok == 1) and loop_active == False:
+            ok = 1
+            zombie.x += zombie_direction * 5
+            if zombie.x < 2920 or zombie.x > 3350:
+                zombie_direction *= -1
+
+
+
+            # Check if zombie catches player
+            if zombie.colliderect(player):
+                game_over = True
+                death_cause = "Caught by the zombie!"
+                game_over_cause()
+        if player.y >500 + PLATFORM_OFFSET_Y:
+            game_over = True
+            game_over_cause()
 
         # 7) Decrease oxygen each frame:
         oxygen -= OXYGEN_DECREASE
         if oxygen <= 0:
             game_over = True
-            game_over_cause()
-
-        # 8) Check alien collisions:
-        if player.colliderect(zombie):
-            game_over = True
-            game_over_cause()
+            game_over_cause() 
 
         # 9) Check rocket win:
         if player.colliderect(rocket):
@@ -368,6 +515,7 @@ while True:
         if player.x + player.width > ground_right:
             player.x = ground_right - player.width
 
+
     # ─── HANDLE INPUT / MOTION WHEN game_over IS TRUE ─────────────────────────────────
     elif game_over:
         for event in pygame.event.get():
@@ -391,11 +539,20 @@ while True:
     # ─── DRAW EVERYTHING ───────────────────────────────────────────────────────────────
     
     for plat in platforms:
+        if plat == platforms[6] and facing_right == True:
+            continue
         pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y, plat.width, plat.height))
-        if plat.x > 460 and plat.x < 1500:
+        if plat == platforms[2]:
             plat.x += rectdirection * 3
             if plat.x < 470 or plat.x > 1400:
                 rectdirection *= -1
+    for plat in changed_plats:
+        if loop_active == False:
+            pygame.draw.rect(screen, (50, 50, 50), (plat.x - camera_x, plat.y, plat.width, plat.height))
+
+    if loop_active and player.x > loop_zone_x_end:
+        player.x = loop_zone_x_start + 10
+        bg_glitch_intensity += 1 
     screen.blit(zombie_img, (zombie.x - camera_x, zombie.y))
     screen.blit(rocket_img, (rocket.x - camera_x, rocket.y))
     # ─── PLAYER ANIMATION & DRAW ────────────────────────────────────────────────────
@@ -421,7 +578,7 @@ while True:
     pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
     pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
     screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
-    
+
     # Start Screen
     if start_screen:
         # Flicker "Press any key" every 500ms
