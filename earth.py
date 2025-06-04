@@ -15,7 +15,7 @@ font_size = int(HEIGHT * 0.05)
 font = pygame.font.SysFont("arial", font_size, bold=True)
 main_font = pygame.font.SysFont("arial", 40)
 skip_font = pygame.font.SysFont("arial", 20)
-PLATFORM_OFFSET_Y = HEIGHT - 600
+PLATFORM_OFFSET_Y = HEIGHT -200
 
 bg_img = pygame.image.load("assets/earth_background.png").convert()
 bg_img = pygame.transform.scale(bg_img, (WIDTH + PLATFORM_OFFSET_Y, HEIGHT))
@@ -82,7 +82,7 @@ death_choice = 1
 
 
 platforms = [
-    pygame.Rect(0, 580 + PLATFORM_OFFSET_Y, 8000, 20),  # ground
+    pygame.Rect(0, 280 + PLATFORM_OFFSET_Y, 8000, 20),  # ground
     pygame.Rect(200, -320 + PLATFORM_OFFSET_Y, 150, 20),
     pygame.Rect(570, -280 + PLATFORM_OFFSET_Y, 100, 20),
     pygame.Rect(1570, -280 + PLATFORM_OFFSET_Y, 100, 20),
@@ -121,7 +121,7 @@ revert_msg_timer = 0
 
 def game_over_cause():
     global death_cause
-    if player.y >500:
+    if player.y > 500:
         death_cause = "Fell off"
     # 3) Ran out of oxygen?
     if oxygen <= 0:
@@ -140,7 +140,8 @@ def game_over_cause():
 
 
     # (If nothing else matched, you could set a default cause here.)
-    death_cause = "Unknown"
+    elif death_cause == "":
+        death_cause = "Unknown"
 
 
 def reset_game():
@@ -275,12 +276,11 @@ changed_plats = []
 def change_map():
     global loop_active, changed_plats, zombie, rocket
     if 7 < len(platforms):
-        current_plat = platforms[6]
-        if player.y <= -320 + PLATFORM_OFFSET_Y and player.x >2170 and player.x <=2265:
+        if player.y <= -320 + PLATFORM_OFFSET_Y and player.x >2170 and player.x <=2250:
             show_revert_text()
             platforms.pop(7)
             loop_active = False
-            rocket = pygame.Rect(3190, -350 + PLATFORM_OFFSET_Y, 60, 50)
+            rocket = pygame.Rect(3190, -370 + PLATFORM_OFFSET_Y, 60, 80)
             zombie = pygame.Rect(3300, 40 + PLATFORM_OFFSET_Y, 60, 60)
     changed_plats = [
     pygame.Rect(2370, -300 + PLATFORM_OFFSET_Y, 100, 20), 
@@ -300,10 +300,7 @@ pygame.mixer.music.fadeout(2000)  # 2 second fadeout
 
 # … (everything up through event handling stays the same) …
 while True:
-    if bg_glitch_intensity > 0:
-        render_glitched_background()
-    else:
-        screen.blit(bg_img, (-camera_x * 0.2, 0))
+    screen.blit(bg_img, (-camera_x * 0.2, 0))
     parallax_x = -camera_x * 0.2
     bg_right_on_screen = parallax_x + bg_img.get_width()
     if bg_right_on_screen < WIDTH:
@@ -575,9 +572,9 @@ while True:
     screen.blit(current_img, (player.x - camera_x, player.y))
 
     # ─── OXYGEN BAR ─────────────────────────────────────────────────────────────────
-    pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
-    pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
-    screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
+    #pygame.draw.rect(screen, (255, 255, 255), (20, 20, 200, 20))
+    #pygame.draw.rect(screen, (0, 100, 255), (20, 20, max(0, int(oxygen * 2)), 20))
+    #screen.blit(font.render("Oxygen", True, (0, 0, 0)), (230, 17))
 
     # Start Screen
     if start_screen:
@@ -639,24 +636,53 @@ while True:
 
     # ─── IF GAME WIN: TRIGGER NEXT LEVEL ────────────────────────────────────────────
     elif win_fade_active:
-        win_msg = font.render("YOU WON! Onto the next level...", True, (0, 255, 0))
-        rect = win_msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-        screen.blit(win_msg, rect)
+        screen.fill(0, 0 , 0)
+        msg1 = "YOU ESCAPED... now what...."
+        msg2 = "Earth is gone."
 
-        # Clamp alpha between 0 and 255
-        win_fade_alpha = min(max(int(win_fade_alpha), 0), 255)
+        text1 = font.render(msg1, True, (0, 255, 0))
+        text2 = font.render(msg2, True, (255, 0, 0))
 
-        # Create fade overlay with alpha support
-        fade_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        fade_surface.fill((0, 0, 0, win_fade_alpha))
-        screen.blit(fade_surface, (0, 0))
+        rect1 = text1.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 30))
+        rect2 = text2.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 30))
 
+        # Fade in msg1
         if win_fade_alpha < 255:
-            win_fade_alpha += 2  # Or your chosen step
+            text1.set_alpha(win_fade_alpha)
+            screen.blit(text1, rect1)
+            win_fade_alpha += 3
+
+        # Start pause timer after msg1 is fully shown
+        elif win_fade_alpha == 255:
+            screen.blit(text1, rect1)
+            win_pause_timer = pygame.time.get_ticks()
+            win_fade_alpha += 1  # Move to next phase
+
+        # Pause phase between messages
+        elif 255 < win_fade_alpha < 500:
+            screen.blit(text1, rect1)
+            if pygame.time.get_ticks() - win_pause_timer > 2000:
+                win_fade_alpha = 500  # Begin fading in second message
+
+        # Fade in msg2 only
+        elif 500 <= win_fade_alpha < 755:
+            alpha2 = win_fade_alpha - 500
+            text1.set_alpha(255)
+            text2.set_alpha(alpha2)
+            screen.blit(text1, rect1)
+            screen.blit(text2, rect2)
+            win_fade_alpha += 3
+
+        # After both messages are fully shown — delay then exit
         else:
-            import moon
-            moon.menu()
-            break  # or return or sys.exit() as needed
+            screen.blit(text1, rect1)
+            screen.blit(text2, rect2)
+            pygame.display.update()
+            pygame.time.delay(2000)
+            pygame.quit()
+            sys.exit()
+
+# or return or sys.exit() as needed
 
 
 
