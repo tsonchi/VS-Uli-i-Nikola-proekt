@@ -161,10 +161,6 @@ def reset_game():
     if len(platforms) < 8:
         platforms.insert(7, loop_platform)
     
-def render_glitched_background():
-    shake_x = random.randint(-bg_glitch_intensity, bg_glitch_intensity)
-    shake_y = random.randint(-bg_glitch_intensity, bg_glitch_intensity)
-    screen.blit(bg_img, (-camera_x * 0.2 + shake_x, 0 + shake_y))
 
 def render_and_fade(screen, text, color, font, skip_text, skip_rect, start_time):
     bg = pygame.Surface((WIDTH, HEIGHT))
@@ -276,7 +272,7 @@ changed_plats = []
 def change_map():
     global loop_active, changed_plats, zombie, rocket
     if 7 < len(platforms):
-        if player.y <= -320 + PLATFORM_OFFSET_Y and player.x >2170 and player.x <=2250:
+        if player.y <= -330 + PLATFORM_OFFSET_Y and player.x >2170 and player.x <=2250:
             show_revert_text()
             platforms.pop(7)
             loop_active = False
@@ -549,7 +545,7 @@ while True:
 
     if loop_active and player.x > loop_zone_x_end:
         player.x = loop_zone_x_start + 10
-        bg_glitch_intensity += 1 
+        
     screen.blit(zombie_img, (zombie.x - camera_x, zombie.y))
     screen.blit(rocket_img, (rocket.x - camera_x, rocket.y))
     # ─── PLAYER ANIMATION & DRAW ────────────────────────────────────────────────────
@@ -636,7 +632,7 @@ while True:
 
     # ─── IF GAME WIN: TRIGGER NEXT LEVEL ────────────────────────────────────────────
     elif win_fade_active:
-        screen.fill(0, 0 , 0)
+        screen.fill((0, 0, 0))
         msg1 = "YOU ESCAPED... now what...."
         msg2 = "Earth is gone."
 
